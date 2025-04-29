@@ -1,6 +1,12 @@
 
 import { SpedProcessedData, SpedRecord } from '@/components/FileUploader';
 
+// Função para normalizar códigos de conta (remover formatação inconsistente)
+const normalizeAccountCode = (code: string): string => {
+  // Remove zeros à direita após o ponto decimal
+  return code.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+};
+
 // Parse the SPED file content
 export const parseSpedFile = (fileContent: string): SpedProcessedData => {
   // Split the file into lines
@@ -28,25 +34,41 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
       const initialDateField = fields[4];
       if (initialDateField && initialDateField.length >= 8) {
         fiscalYear = initialDateField.substring(4, 8); // Extract year from DDMMYYYY
+        console.log(`Fiscal year extracted: ${fiscalYear}`);
       }
     }
     else if (fields[1] === 'I050') {
       // Process I050 record (Chart of Accounts)
       if (fields.length >= 4) {
-        // Map the account code to its description
-        chartOfAccounts.set(fields[2], fields[3]);
+        const accountCode = fields[2] || '';
+        const accountName = fields[3] || '';
+        
+        if (accountCode) {
+          // Normalize the account code before storing
+          const normalizedCode = normalizeAccountCode(accountCode);
+          console.log(`Added account to chart: ${normalizedCode} = ${accountName}`);
+          
+          // Map the account code to its description
+          chartOfAccounts.set(normalizedCode, accountName);
+        }
       }
     }
     else if (fields[1] === 'J100') {
       // Process J100 record (Balance Sheet)
       if (fields.length >= 6) {
         const accountCode = fields[2] || '';
+        const normalizedCode = normalizeAccountCode(accountCode);
+        
         // Get account description from chart of accounts, or use the one in J100 if not found
-        const accountDescription = chartOfAccounts.get(accountCode) || fields[3] || '';
+        const accountDescription = chartOfAccounts.get(normalizedCode) || fields[3] || '';
+        
+        if (!chartOfAccounts.get(normalizedCode)) {
+          console.log(`Account not found in chart: ${normalizedCode} (original: ${accountCode})`);
+        }
         
         records.push({
           accountCode,
-          accountDescription,
+          accountDescription: accountDescription || 'Conta não encontrada',
           finalBalance: fields[5] || '',
           block: 'J100',
           fiscalYear: fiscalYear
@@ -57,12 +79,18 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
       // Process J150 record (Income Statement)
       if (fields.length >= 6) {
         const accountCode = fields[2] || '';
+        const normalizedCode = normalizeAccountCode(accountCode);
+        
         // Get account description from chart of accounts, or use the one in J150 if not found
-        const accountDescription = chartOfAccounts.get(accountCode) || fields[3] || '';
+        const accountDescription = chartOfAccounts.get(normalizedCode) || fields[3] || '';
+        
+        if (!chartOfAccounts.get(normalizedCode)) {
+          console.log(`Account not found in chart: ${normalizedCode} (original: ${accountCode})`);
+        }
         
         records.push({
           accountCode,
-          accountDescription,
+          accountDescription: accountDescription || 'Conta não encontrada',
           finalBalance: fields[5] || '',
           block: 'J150',
           fiscalYear: fiscalYear
@@ -70,6 +98,9 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
       }
     }
   });
+  
+  console.log(`Total accounts in chart: ${chartOfAccounts.size}`);
+  console.log(`Total records processed: ${records.length}`);
   
   // Mock data in case the file doesn't contain valid records
   if (records.length === 0) {
