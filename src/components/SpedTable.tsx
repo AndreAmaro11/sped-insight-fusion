@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SpedRecord } from './FileUploader';
 import { formatCurrency } from '@/utils/spedParser';
 
@@ -19,14 +20,17 @@ interface SpedTableProps {
 
 const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredBlock, setFilteredBlock] = useState<'all' | 'J100' | 'J150'>('all');
   
-  const handleDownloadCSV = () => {
+  // Separar dados por bloco
+  const balanceSheetData = data.filter(record => record.block === 'J100');
+  const incomeStatementData = data.filter(record => record.block === 'J150');
+  
+  const handleDownloadCSV = (blockData: SpedRecord[], fileName: string) => {
     // Create CSV content
     let csvContent = "Conta Contábil,Descrição da Conta,Saldo Final,Bloco,Ano Fiscal\n";
     
     // Add data rows
-    filteredData.forEach((record) => {
+    blockData.forEach((record) => {
       csvContent += `"${record.accountCode}","${record.accountDescription}","${record.finalBalance}","${record.block}","${record.fiscalYear}"\n`;
     });
     
@@ -38,7 +42,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
     const url = URL.createObjectURL(blob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `sped_data_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
@@ -46,18 +50,18 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
     document.body.removeChild(link);
   };
   
-  // Filter data based on search term and block filter
-  const filteredData = data.filter((record) => {
-    const matchesSearch = 
+  // Filtrar dados com base no termo de busca
+  const filterData = (data: SpedRecord[]) => {
+    if (!searchTerm) return data;
+    
+    return data.filter(record => 
       record.accountCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      record.accountDescription.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = 
-      filteredBlock === 'all' || 
-      record.block === filteredBlock;
-    
-    return matchesSearch && matchesFilter;
-  });
+      record.accountDescription.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+  
+  const filteredBalanceSheet = filterData(balanceSheetData);
+  const filteredIncomeStatement = filterData(incomeStatementData);
 
   return (
     <div>
@@ -71,86 +75,111 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
             className="max-w-md"
           />
         </div>
+      </div>
+      
+      {/* Tabs for Balance Sheet and Income Statement */}
+      <Tabs defaultValue="balance-sheet" className="w-full">
+        <TabsList className="mb-4 w-full justify-start">
+          <TabsTrigger value="balance-sheet">Balanço Patrimonial (J100)</TabsTrigger>
+          <TabsTrigger value="income-statement">DRE (J150)</TabsTrigger>
+        </TabsList>
         
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">Filtrar por:</span>
+        {/* Balance Sheet Tab */}
+        <TabsContent value="balance-sheet">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold text-lg">Balanço Patrimonial</h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleDownloadCSV(filteredBalanceSheet, `balanco_patrimonial_${data[0]?.fiscalYear || 'dados'}.csv`)}
+            >
+              Exportar CSV
+            </Button>
+          </div>
           
-          <Button
-            variant={filteredBlock === 'all' ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setFilteredBlock('all')}
-          >
-            Todos
-          </Button>
-          
-          <Button
-            variant={filteredBlock === 'J100' ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setFilteredBlock('J100')}
-          >
-            J100
-          </Button>
-          
-          <Button
-            variant={filteredBlock === 'J150' ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setFilteredBlock('J150')}
-          >
-            J150
-          </Button>
-          
-          <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
-            Exportar CSV
-          </Button>
-        </div>
-      </div>
-      
-      {/* Data table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[150px]">Conta Contábil</TableHead>
-              <TableHead className="max-w-[300px]">Descrição da Conta</TableHead>
-              <TableHead className="w-[150px]">Saldo Final</TableHead>
-              <TableHead className="w-[100px]">Bloco</TableHead>
-              <TableHead className="w-[100px]">Ano Fiscal</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.length > 0 ? (
-              filteredData.map((record, index) => (
-                <TableRow key={`${record.accountCode}-${record.block}-${index}`}>
-                  <TableCell className="font-medium">{record.accountCode}</TableCell>
-                  <TableCell>{record.accountDescription}</TableCell>
-                  <TableCell>{formatCurrency(record.finalBalance)}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      record.block === 'J100' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {record.block}
-                    </span>
-                  </TableCell>
-                  <TableCell>{record.fiscalYear}</TableCell>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Conta Contábil</TableHead>
+                  <TableHead className="max-w-[300px]">Descrição da Conta</TableHead>
+                  <TableHead className="w-[150px]">Saldo Final</TableHead>
+                  <TableHead className="w-[100px]">Ano Fiscal</TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-6 text-gray-500">
-                  Nenhum registro encontrado
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {/* Results counter */}
-      <div className="mt-4 text-sm text-gray-500">
-        Exibindo {filteredData.length} de {data.length} registros
-      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredBalanceSheet.length > 0 ? (
+                  filteredBalanceSheet.map((record, index) => (
+                    <TableRow key={`${record.accountCode}-${record.block}-${index}`}>
+                      <TableCell className="font-medium">{record.accountCode}</TableCell>
+                      <TableCell>{record.accountDescription}</TableCell>
+                      <TableCell>{formatCurrency(record.finalBalance)}</TableCell>
+                      <TableCell>{record.fiscalYear}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                      Nenhum registro de Balanço encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-2 text-sm text-gray-500">
+            Exibindo {filteredBalanceSheet.length} de {balanceSheetData.length} registros
+          </div>
+        </TabsContent>
+        
+        {/* Income Statement Tab */}
+        <TabsContent value="income-statement">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold text-lg">Demonstração do Resultado (DRE)</h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleDownloadCSV(filteredIncomeStatement, `dre_${data[0]?.fiscalYear || 'dados'}.csv`)}
+            >
+              Exportar CSV
+            </Button>
+          </div>
+          
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[150px]">Conta Contábil</TableHead>
+                  <TableHead className="max-w-[300px]">Descrição da Conta</TableHead>
+                  <TableHead className="w-[150px]">Saldo Final</TableHead>
+                  <TableHead className="w-[100px]">Ano Fiscal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredIncomeStatement.length > 0 ? (
+                  filteredIncomeStatement.map((record, index) => (
+                    <TableRow key={`${record.accountCode}-${record.block}-${index}`}>
+                      <TableCell className="font-medium">{record.accountCode}</TableCell>
+                      <TableCell>{record.accountDescription}</TableCell>
+                      <TableCell>{formatCurrency(record.finalBalance)}</TableCell>
+                      <TableCell>{record.fiscalYear}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                      Nenhum registro de DRE encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-2 text-sm text-gray-500">
+            Exibindo {filteredIncomeStatement.length} de {incomeStatementData.length} registros
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
