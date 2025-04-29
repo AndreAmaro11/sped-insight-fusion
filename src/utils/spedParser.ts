@@ -59,19 +59,19 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
         const accountCode = fields[2] || '';
         const normalizedCode = normalizeAccountCode(accountCode);
         
-        // Get account description from chart of accounts, or use the one in J100 if not found
-        const accountDescription = chartOfAccounts.get(normalizedCode) || fields[3] || '';
+        // Get account description from chart of accounts, or use "Conta não encontrada" if not found
+        const accountDescription = chartOfAccounts.get(normalizedCode) || 'Conta não encontrada';
         
-        if (!chartOfAccounts.get(normalizedCode)) {
-          console.log(`Account not found in chart: ${normalizedCode} (original: ${accountCode})`);
-        }
+        // Parse finalBalance as a number
+        const finalBalanceStr = fields[5] || '0';
+        const finalBalance = parseFloat(finalBalanceStr.replace(',', '.'));
         
         records.push({
           accountCode,
-          accountDescription: accountDescription || 'Conta não encontrada',
-          finalBalance: fields[5] || '',
+          accountDescription,
+          finalBalance,
           block: 'J100',
-          fiscalYear: fiscalYear
+          fiscalYear: parseInt(fiscalYear, 10) || 0
         });
       }
     } 
@@ -81,19 +81,19 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
         const accountCode = fields[2] || '';
         const normalizedCode = normalizeAccountCode(accountCode);
         
-        // Get account description from chart of accounts, or use the one in J150 if not found
-        const accountDescription = chartOfAccounts.get(normalizedCode) || fields[3] || '';
+        // Get account description from chart of accounts, or use "Conta não encontrada" if not found
+        const accountDescription = chartOfAccounts.get(normalizedCode) || 'Conta não encontrada';
         
-        if (!chartOfAccounts.get(normalizedCode)) {
-          console.log(`Account not found in chart: ${normalizedCode} (original: ${accountCode})`);
-        }
+        // Parse finalBalance as a number
+        const finalBalanceStr = fields[5] || '0';
+        const finalBalance = parseFloat(finalBalanceStr.replace(',', '.'));
         
         records.push({
           accountCode,
-          accountDescription: accountDescription || 'Conta não encontrada',
-          finalBalance: fields[5] || '',
+          accountDescription,
+          finalBalance,
           block: 'J150',
-          fiscalYear: fiscalYear
+          fiscalYear: parseInt(fiscalYear, 10) || 0
         });
       }
     }
@@ -105,61 +105,56 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
   // Mock data in case the file doesn't contain valid records
   if (records.length === 0) {
     // If there are no records (or the file format was invalid), create mock data
-    fiscalYear = fiscalYear || '2023';  // Default year if not found
+    const fiscalYearNum = parseInt(fiscalYear, 10) || 2023;
     
     // Create some mock records for demonstration
     records.push(
       { 
         accountCode: '1.01.01', 
         accountDescription: 'Caixa e Equivalentes de Caixa', 
-        finalBalance: '150000.00', 
+        finalBalance: 150000, 
         block: 'J100',
-        fiscalYear 
+        fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '1.02.01', 
         accountDescription: 'Investimentos', 
-        finalBalance: '250000.00', 
+        finalBalance: 250000, 
         block: 'J100',
-        fiscalYear 
+        fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '2.01.01', 
         accountDescription: 'Fornecedores', 
-        finalBalance: '75000.00', 
+        finalBalance: 75000, 
         block: 'J100',
-        fiscalYear 
+        fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '3.01', 
         accountDescription: 'Receita Líquida', 
-        finalBalance: '500000.00', 
+        finalBalance: 500000, 
         block: 'J150',
-        fiscalYear 
+        fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '3.02', 
         accountDescription: 'Custo dos Produtos Vendidos', 
-        finalBalance: '300000.00', 
+        finalBalance: -300000, 
         block: 'J150',
-        fiscalYear 
+        fiscalYear: fiscalYearNum
       }
     );
   }
   
-  return { fiscalYear, records };
+  return { fiscalYear: parseInt(fiscalYear, 10) || 0, records };
 };
 
 // Function to format currency values
-export const formatCurrency = (value: string): string => {
-  if (!value) return 'R$ 0,00';
-  
-  // Convert string to number
-  const numValue = parseFloat(value.replace(',', '.'));
-  
-  // Format the number
+export const formatCurrency = (value: number): string => {
+  // Format the number as BRL currency
   return new Intl.NumberFormat('pt-BR', { 
     style: 'currency', 
     currency: 'BRL' 
-  }).format(numValue);
+  }).format(value);
 };

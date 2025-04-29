@@ -91,7 +91,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => handleDownloadCSV(filteredBalanceSheet, `balanco_patrimonial_${data[0]?.fiscalYear || 'dados'}.csv`)}
+              onClick={() => handleDownloadCSV(filteredBalanceSheet, `balanco_patrimonial_${filteredBalanceSheet[0]?.fiscalYear || 'dados'}.csv`)}
             >
               Exportar CSV
             </Button>
@@ -139,7 +139,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => handleDownloadCSV(filteredIncomeStatement, `dre_${data[0]?.fiscalYear || 'dados'}.csv`)}
+              onClick={() => handleDownloadCSV(filteredIncomeStatement, `dre_${filteredIncomeStatement[0]?.fiscalYear || 'dados'}.csv`)}
             >
               Exportar CSV
             </Button>
