@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,16 +9,16 @@ interface FileUploaderProps {
 }
 
 export interface SpedProcessedData {
-  fiscalYear: string;
+  fiscalYear: number;
   records: SpedRecord[];
 }
 
 export interface SpedRecord {
   accountCode: string;
   accountDescription: string;
-  finalBalance: string;
+  finalBalance: number;
   block: 'J100' | 'J150';
-  fiscalYear: string;
+  fiscalYear: number;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
@@ -91,15 +90,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
     setIsProcessing(true);
     
     try {
-      // Read the file content
       const fileContent = await readFileContent(file);
       
-      // Parse the SPED file
       const processedData = parseSpedFile(fileContent);
       
       toast.success(`Arquivo SPED processado com sucesso. Ano fiscal: ${processedData.fiscalYear}`);
       
-      // Call the callback with the processed data
       onFileProcessed(processedData);
     } catch (error) {
       console.error("Error processing file:", error);
@@ -132,7 +128,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
       return;
     }
     
-    // Simulate upload progress (in a real app, this would be a real upload)
     simulateUploadProgress();
   };
 
