@@ -10,6 +10,9 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
   let fiscalYear = '';
   const records: SpedRecord[] = [];
   
+  // Create a map to store the chart of accounts (I050 block)
+  const chartOfAccounts = new Map<string, string>();
+  
   // Process each line
   lines.forEach(line => {
     // Remove any trailing carriage return
@@ -27,12 +30,23 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
         fiscalYear = initialDateField.substring(4, 8); // Extract year from DDMMYYYY
       }
     }
+    else if (fields[1] === 'I050') {
+      // Process I050 record (Chart of Accounts)
+      if (fields.length >= 4) {
+        // Map the account code to its description
+        chartOfAccounts.set(fields[2], fields[3]);
+      }
+    }
     else if (fields[1] === 'J100') {
       // Process J100 record (Balance Sheet)
       if (fields.length >= 6) {
+        const accountCode = fields[2] || '';
+        // Get account description from chart of accounts, or use the one in J100 if not found
+        const accountDescription = chartOfAccounts.get(accountCode) || fields[3] || '';
+        
         records.push({
-          accountCode: fields[2] || '',
-          accountDescription: fields[3] || '',
+          accountCode,
+          accountDescription,
           finalBalance: fields[5] || '',
           block: 'J100',
           fiscalYear: fiscalYear
@@ -42,9 +56,13 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
     else if (fields[1] === 'J150') {
       // Process J150 record (Income Statement)
       if (fields.length >= 6) {
+        const accountCode = fields[2] || '';
+        // Get account description from chart of accounts, or use the one in J150 if not found
+        const accountDescription = chartOfAccounts.get(accountCode) || fields[3] || '';
+        
         records.push({
-          accountCode: fields[2] || '',
-          accountDescription: fields[3] || '',
+          accountCode,
+          accountDescription,
           finalBalance: fields[5] || '',
           block: 'J150',
           fiscalYear: fiscalYear
