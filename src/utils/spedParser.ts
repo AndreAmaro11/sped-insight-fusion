@@ -13,7 +13,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
   const lines = fileContent.split('\n');
   
   // Variables to store the extracted data
-  let fiscalYear = '';
+  let fiscalYear = 0;
   const records: SpedRecord[] = [];
   
   // Create a map to store the chart of accounts (I050 block)
@@ -33,7 +33,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
       // The date format is DDMMYYYY - take the last 4 characters for the year
       const initialDateField = fields[4];
       if (initialDateField && initialDateField.length >= 8) {
-        fiscalYear = initialDateField.substring(4, 8); // Extract year from DDMMYYYY
+        fiscalYear = parseInt(initialDateField.substring(4, 8), 10); // Extract year from DDMMYYYY
         console.log(`Fiscal year extracted: ${fiscalYear}`);
       }
     }
@@ -53,8 +53,15 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
         }
       }
     }
-    else if (fields[1] === 'J100') {
-      // Process J100 record (Balance Sheet)
+  });
+  
+  // After loading all chart of accounts, process the balance records
+  lines.forEach(line => {
+    const cleanLine = line.replace('\r', '');
+    const fields = cleanLine.split('|');
+    
+    // Process balance records from J100, J150, and I150
+    if (['J100', 'J150', 'I150'].includes(fields[1])) {
       if (fields.length >= 6) {
         const accountCode = fields[2] || '';
         const normalizedCode = normalizeAccountCode(accountCode);
@@ -66,34 +73,15 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
         const finalBalanceStr = fields[5] || '0';
         const finalBalance = parseFloat(finalBalanceStr.replace(',', '.'));
         
-        records.push({
-          accountCode,
-          accountDescription,
-          finalBalance,
-          block: 'J100',
-          fiscalYear: parseInt(fiscalYear, 10) || 0
-        });
-      }
-    } 
-    else if (fields[1] === 'J150') {
-      // Process J150 record (Income Statement)
-      if (fields.length >= 6) {
-        const accountCode = fields[2] || '';
-        const normalizedCode = normalizeAccountCode(accountCode);
-        
-        // Get account description from chart of accounts, or use "Conta não encontrada" if not found
-        const accountDescription = chartOfAccounts.get(normalizedCode) || 'Conta não encontrada';
-        
-        // Parse finalBalance as a number
-        const finalBalanceStr = fields[5] || '0';
-        const finalBalance = parseFloat(finalBalanceStr.replace(',', '.'));
+        // Add the record to the array with the block type
+        const block = fields[1] as 'J100' | 'J150' | 'I150';
         
         records.push({
           accountCode,
           accountDescription,
           finalBalance,
-          block: 'J150',
-          fiscalYear: parseInt(fiscalYear, 10) || 0
+          block,
+          fiscalYear
         });
       }
     }
@@ -105,7 +93,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
   // Mock data in case the file doesn't contain valid records
   if (records.length === 0) {
     // If there are no records (or the file format was invalid), create mock data
-    const fiscalYearNum = parseInt(fiscalYear, 10) || 2023;
+    const fiscalYearNum = fiscalYear || 2023;
     
     // Create some mock records for demonstration
     records.push(
@@ -147,7 +135,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
     );
   }
   
-  return { fiscalYear: parseInt(fiscalYear, 10) || 0, records };
+  return { fiscalYear, records };
 };
 
 // Function to format currency values

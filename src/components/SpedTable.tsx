@@ -24,6 +24,11 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
   // Separar dados por bloco
   const balanceSheetData = data.filter(record => record.block === 'J100');
   const incomeStatementData = data.filter(record => record.block === 'J150');
+  const altIncomeStatementData = data.filter(record => record.block === 'I150');
+  
+  // Combine I150 and J150 data if specified by business requirements
+  const displayIncomeData = incomeStatementData.length > 0 ? incomeStatementData : altIncomeStatementData;
+  const incomeBlockName = incomeStatementData.length > 0 ? 'J150' : 'I150';
   
   const handleDownloadCSV = (blockData: SpedRecord[], fileName: string) => {
     // Create CSV content
@@ -61,7 +66,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
   };
   
   const filteredBalanceSheet = filterData(balanceSheetData);
-  const filteredIncomeStatement = filterData(incomeStatementData);
+  const filteredIncomeStatement = filterData(displayIncomeData);
 
   return (
     <div>
@@ -81,7 +86,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
       <Tabs defaultValue="balance-sheet" className="w-full">
         <TabsList className="mb-4 w-full justify-start">
           <TabsTrigger value="balance-sheet">Balanço Patrimonial (J100)</TabsTrigger>
-          <TabsTrigger value="income-statement">DRE (J150)</TabsTrigger>
+          <TabsTrigger value="income-statement">DRE ({incomeBlockName})</TabsTrigger>
         </TabsList>
         
         {/* Balance Sheet Tab */}
@@ -176,7 +181,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
             </Table>
           </div>
           <div className="mt-2 text-sm text-gray-500">
-            Exibindo {filteredIncomeStatement.length} de {incomeStatementData.length} registros
+            Exibindo {filteredIncomeStatement.length} de {displayIncomeData.length} registros
           </div>
         </TabsContent>
       </Tabs>
