@@ -30,10 +30,10 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
     // Check the record type
     if (fields[1] === '0000') {
       // This is the header record, extract the fiscal year from the initial date
-      // The date format is DDMMYYYY - take the last 4 characters for the year
-      const initialDateField = fields[4];
+      // The date format is YYYYMMDD in field 5
+      const initialDateField = fields[5] || '';
       if (initialDateField && initialDateField.length >= 8) {
-        fiscalYear = parseInt(initialDateField.substring(4, 8), 10); // Extract year from DDMMYYYY
+        fiscalYear = parseInt(initialDateField.substring(0, 4), 10); // Extract year from YYYYMMDD
         console.log(`Fiscal year extracted: ${fiscalYear}`);
       }
     }
@@ -60,27 +60,25 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
     const cleanLine = line.replace('\r', '');
     const fields = cleanLine.split('|');
     
-    // Process balance records from J100, J150, and I150
-    if (['J100', 'J150', 'I150'].includes(fields[1])) {
-      if (fields.length >= 6) {
+    // Process only I150 records (ignoring J100 and J150)
+    if (fields[1] === 'I150') {
+      if (fields.length >= 5) {
         const accountCode = fields[2] || '';
         const normalizedCode = normalizeAccountCode(accountCode);
         
         // Get account description from chart of accounts, or use "Conta não encontrada" if not found
         const accountDescription = chartOfAccounts.get(normalizedCode) || 'Conta não encontrada';
         
-        // Parse finalBalance as a number
-        const finalBalanceStr = fields[5] || '0';
+        // Parse finalBalance as a number (field 4 contains the balance)
+        const finalBalanceStr = fields[4] || '0';
         const finalBalance = parseFloat(finalBalanceStr.replace(',', '.'));
         
-        // Add the record to the array with the block type
-        const block = fields[1] as 'J100' | 'J150' | 'I150';
-        
+        // Add the record to the array
         records.push({
           accountCode,
           accountDescription,
           finalBalance,
-          block,
+          block: 'I150',
           fiscalYear
         });
       }
@@ -101,35 +99,35 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
         accountCode: '1.01.01', 
         accountDescription: 'Caixa e Equivalentes de Caixa', 
         finalBalance: 150000, 
-        block: 'J100',
+        block: 'I150',
         fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '1.02.01', 
         accountDescription: 'Investimentos', 
         finalBalance: 250000, 
-        block: 'J100',
+        block: 'I150',
         fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '2.01.01', 
         accountDescription: 'Fornecedores', 
         finalBalance: 75000, 
-        block: 'J100',
+        block: 'I150',
         fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '3.01', 
         accountDescription: 'Receita Líquida', 
         finalBalance: 500000, 
-        block: 'J150',
+        block: 'I150',
         fiscalYear: fiscalYearNum
       },
       { 
         accountCode: '3.02', 
         accountDescription: 'Custo dos Produtos Vendidos', 
         finalBalance: -300000, 
-        block: 'J150',
+        block: 'I150',
         fiscalYear: fiscalYearNum
       }
     );
