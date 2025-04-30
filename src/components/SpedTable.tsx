@@ -29,11 +29,11 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
 
   const handleDownloadCSV = () => {
     // Create CSV content
-    let csvContent = "Conta Contábil,Descrição da Conta,Saldo Final,Ano Fiscal\n";
+    let csvContent = "Conta Contábil,Descrição da Conta,Saldo Final,Ano Fiscal,Bloco\n";
     
     // Add data rows
     filteredData.forEach((record) => {
-      csvContent += `"${record.accountCode}","${record.accountDescription}","${record.finalBalance}","${record.fiscalYear}"\n`;
+      csvContent += `"${record.accountCode}","${record.accountDescription}","${record.finalBalance}","${record.fiscalYear}","${record.block}"\n`;
     });
     
     // Create a blob with the CSV data
@@ -64,7 +64,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
             className="max-w-md"
           />
         </div>
-        <div>
+        <div className="flex gap-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -82,6 +82,7 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
               <TableHead className="w-[150px]">Conta Contábil</TableHead>
               <TableHead>Descrição da Conta</TableHead>
               <TableHead className="w-[150px]">Saldo Final</TableHead>
+              <TableHead className="w-[100px]">Tipo</TableHead>
               <TableHead className="w-[100px]">Ano Fiscal</TableHead>
             </TableRow>
           </TableHeader>
@@ -92,12 +93,13 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
                   <TableCell className="font-medium">{record.accountCode}</TableCell>
                   <TableCell>{record.accountDescription}</TableCell>
                   <TableCell>{formatCurrency(record.finalBalance)}</TableCell>
+                  <TableCell>{record.block}</TableCell>
                   <TableCell>{record.fiscalYear}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-6 text-gray-500">
                   Nenhum registro encontrado
                 </TableCell>
               </TableRow>
