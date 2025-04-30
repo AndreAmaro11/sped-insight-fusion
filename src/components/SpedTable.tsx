@@ -12,6 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SpedRecord } from './FileUploader';
 import { formatCurrency } from '@/utils/spedParser';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface SpedTableProps {
   data: SpedRecord[];
@@ -19,6 +28,8 @@ interface SpedTableProps {
 
 const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Filtrar dados com base no termo de busca
   const filteredData = data.filter(record => 
@@ -27,13 +38,19 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
     record.accountDescription.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
   const handleDownloadCSV = () => {
     // Create CSV content
-    let csvContent = "Conta Contábil,Descrição da Conta,Saldo Final,Ano Fiscal,Bloco\n";
+    let csvContent = "Conta Contábil;Descrição da Conta;Saldo Final;Ano Fiscal;Bloco\n";
     
     // Add data rows
     filteredData.forEach((record) => {
-      csvContent += `"${record.accountCode}","${record.accountDescription}","${record.finalBalance}","${record.fiscalYear}","${record.block}"\n`;
+      const formattedBalance = record.finalBalance.toString().replace('.', ',');
+      csvContent += `"${record.accountCode}";"${record.accountDescription}";"${formattedBalance}";"${record.fiscalYear}";"${record.block}"\n`;
     });
     
     // Create a blob with the CSV data
@@ -87,8 +104,8 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length > 0 ? (
-              filteredData.map((record, index) => (
+            {currentData.length > 0 ? (
+              currentData.map((record, index) => (
                 <TableRow key={`${record.accountCode}-${index}`}>
                   <TableCell className="font-medium">{record.accountCode}</TableCell>
                   <TableCell>{record.accountDescription}</TableCell>
@@ -107,8 +124,72 @@ const SpedTable: React.FC<SpedTableProps> = ({ data }) => {
           </TableBody>
         </Table>
       </div>
-      <div className="mt-2 text-sm text-gray-500">
-        Exibindo {filteredData.length} de {data.length} registros
+      
+      {/* Informações e paginação */}
+      <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div className="text-sm text-gray-500">
+          Exibindo {currentData.length} de {filteredData.length} registros
+        </div>
+        
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(p => Math.max(1, p - 1));
+                  }} 
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              
+              {/* Mostrar apenas algumas páginas para não sobrecarregar a UI */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNumber = i + 1;
+                const showPage = pageNumber <= 3 || pageNumber > totalPages - 2 || 
+                                Math.abs(pageNumber - currentPage) <= 1;
+                
+                if (!showPage && (pageNumber === 4 && currentPage > 3)) {
+                  return (
+                    <PaginationItem key="ellipsis-1">
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                
+                if (!showPage) return null;
+                
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink 
+                      href="#" 
+                      isActive={currentPage === pageNumber}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(pageNumber);
+                      }}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(p => Math.min(totalPages, p + 1));
+                  }}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </div>
     </div>
   );
