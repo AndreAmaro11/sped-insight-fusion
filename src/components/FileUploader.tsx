@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -18,7 +17,7 @@ export interface SpedRecord {
   accountCode: string;
   accountDescription: string;
   finalBalance: number;
-  block: 'J100' | 'J150' | 'I150';
+  block: string; // Updated from 'J100' | 'J150' | 'I150' to string to accept any block type
   fiscalYear: number;
 }
 

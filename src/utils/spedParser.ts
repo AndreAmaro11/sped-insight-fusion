@@ -99,7 +99,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
           accountCode,
           accountDescription: chartOfAccounts.get(accountCode) || 'Conta não identificada',
           finalBalance,
-          block: recordType,
+          block: recordType, // Now this works because block is of type string
           fiscalYear
         });
       } catch (error) {
@@ -144,7 +144,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
               accountCode: normalizedCode,
               accountDescription: chartOfAccounts.get(normalizedCode) || 'Descrição não disponível',
               finalBalance,
-              block: recordType,
+              block: recordType, // Now this works because block is of type string
               fiscalYear: fiscalYear || new Date().getFullYear()
             });
             console.log(`Registro alternativo processado: ${recordType}, Conta: ${accountCode}, Valor: ${finalBalance}`);
@@ -164,7 +164,7 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
           accountCode: '1.01.01', 
           accountDescription: 'Caixa e Equivalentes de Caixa', 
           finalBalance: 150000, 
-          block: 'I155',
+          block: 'I155', // Now this works because block is of type string
           fiscalYear: mockYear
         },
       );
