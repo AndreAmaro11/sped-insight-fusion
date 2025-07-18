@@ -1,36 +1,24 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Navbar from '@/components/Navbar';
-import FileUploader, { SpedProcessedData, SpedRecord } from '@/components/FileUploader';
+import FileUploader from '@/components/FileUploader';
 import SpedTable from '@/components/SpedTable';
 import SpedDRE from '@/components/SpedDRE';
 import SpedBalanco from '@/components/SpedBalanco';
-import { generateReports, ReportData } from '@/utils/reportUtils';
+import ReportNavigation from '@/components/ReportNavigation';
+import { useSped } from '@/hooks/useSped';
 
 const SpedUpload = () => {
-  const [processedData, setProcessedData] = useState<SpedProcessedData | null>(null);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [selectedTab, setSelectedTab] = useState('upload');
-  
-  // Removendo a verificação de autenticação para simplificar o teste
-
-  const handleFileProcessed = (data: SpedProcessedData) => {
-    console.log("Dados processados:", data);
-    setProcessedData(data);
-    
-    if (data.records.length > 0) {
-      // Gerar relatórios (DRE e Balanço)
-      console.log("Gerando relatórios a partir de", data.records.length, "registros");
-      const reports = generateReports(data.records, data.fiscalYear);
-      console.log("Relatórios gerados:", reports);
-      setReportData(reports);
-      
-      // Mudar para a aba de resultados
-      setSelectedTab('results');
-    }
-  };
+  const {
+    processedData,
+    reportData,
+    selectedTab,
+    handleFileProcessed,
+    navigateToTab,
+    setSelectedTab,
+  } = useSped();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -80,23 +68,10 @@ const SpedUpload = () => {
                       </p>
                     </div>
                     
-                    <div className="flex gap-2">
-                      <button
-                        className="text-primary hover:text-primary/80 text-sm"
-                        onClick={() => setSelectedTab('upload')}
-                      >
-                        ← Voltar para Upload
-                      </button>
-                      
-                      {reportData && (
-                        <button
-                          className="text-primary hover:text-primary/80 text-sm"
-                          onClick={() => setSelectedTab('dre')}
-                        >
-                          Ver DRE →
-                        </button>
-                      )}
-                    </div>
+                    <ReportNavigation 
+                      onNavigate={navigateToTab}
+                      showDRE={!!reportData}
+                    />
                   </div>
                   
                   <Card>
@@ -117,21 +92,10 @@ const SpedUpload = () => {
                       <p className="text-sm text-gray-500">Ano Fiscal: {reportData.fiscalYear}</p>
                     </div>
                     
-                    <div className="flex gap-2">
-                      <button
-                        className="text-primary hover:text-primary/80 text-sm"
-                        onClick={() => setSelectedTab('upload')}
-                      >
-                        ← Voltar para Upload
-                      </button>
-                      
-                      <button
-                        className="text-primary hover:text-primary/80 text-sm"
-                        onClick={() => setSelectedTab('balanco')}
-                      >
-                        Ver Balanço →
-                      </button>
-                    </div>
+                    <ReportNavigation 
+                      onNavigate={navigateToTab}
+                      showBalanco={true}
+                    />
                   </div>
                   
                   <Card>
@@ -152,21 +116,10 @@ const SpedUpload = () => {
                       <p className="text-sm text-gray-500">Ano Fiscal: {reportData.fiscalYear}</p>
                     </div>
                     
-                    <div className="flex gap-2">
-                      <button
-                        className="text-primary hover:text-primary/80 text-sm"
-                        onClick={() => setSelectedTab('upload')}
-                      >
-                        ← Voltar para Upload
-                      </button>
-                      
-                      <button
-                        className="text-primary hover:text-primary/80 text-sm"
-                        onClick={() => setSelectedTab('dre')}
-                      >
-                        ← Ver DRE
-                      </button>
-                    </div>
+                    <ReportNavigation 
+                      onNavigate={navigateToTab}
+                      showDRE={true}
+                    />
                   </div>
                   
                   <Card>

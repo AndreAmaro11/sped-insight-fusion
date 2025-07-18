@@ -1,74 +1,31 @@
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
-import { parseSpedFile } from '@/utils/spedParser';
 import { Loader, FileText, AlertTriangle } from "lucide-react";
+import { SpedProcessedData } from '@/types/sped';
+import { useFileProcessing } from '@/hooks/useFileProcessing';
+import FilePreview from './FilePreview';
 
 interface FileUploaderProps {
   onFileProcessed: (data: SpedProcessedData) => void;
 }
 
-export interface SpedProcessedData {
-  fiscalYear: number;
-  records: SpedRecord[];
-}
-
-export interface SpedRecord {
-  accountCode: string;
-  accountDescription: string;
-  finalBalance: number;
-  block: string;
-  fiscalYear: number;
-}
-
 const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [filePreview, setFilePreview] = useState<string>('');
-  const [showPreview, setShowPreview] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    fileState,
+    fileInputRef,
+    setFile,
+    handleProcess,
+    togglePreview,
+    handleUploadClick,
+  } = useFileProcessing(onFileProcessed);
+
+  const { file, uploadProgress, isProcessing, filePreview, showPreview } = fileState;
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    
-    if (!selectedFile) {
-      return;
-    }
-    
-    if (!selectedFile.name.toLowerCase().endsWith('.txt')) {
-      toast.error("Por favor, selecione um arquivo SPED em formato .txt");
-      return;
-    }
-    
-    setFile(selectedFile);
-    setUploadProgress(0);
-    setFilePreview('');
-    setShowPreview(false);
-    
-    // Verificação inicial do tamanho
-    if (selectedFile.size === 0) {
-      toast.error("O arquivo está vazio.");
-      return;
-    }
-    
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      toast.warning("O arquivo é muito grande (>10MB). O processamento pode demorar.");
-    }
-    
-    console.log(`Arquivo selecionado: ${selectedFile.name}, Tamanho: ${(selectedFile.size / 1024).toFixed(2)} KB`);
-    
-    // Carregar amostra do conteúdo
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      // Mostrar apenas as primeiras 20 linhas
-      const lines = content.split('\n').slice(0, 20);
-      setFilePreview(lines.join('\n'));
-    };
-    reader.readAsText(selectedFile.slice(0, 10000)); // Ler apenas os primeiros 10KB para preview
+    setFile(selectedFile || null);
   };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -80,139 +37,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
     
     if (event.dataTransfer.files?.length) {
       const droppedFile = event.dataTransfer.files[0];
-      
-      if (!droppedFile.name.toLowerCase().endsWith('.txt')) {
-        toast.error("Por favor, selecione um arquivo SPED em formato .txt");
-        return;
-      }
-      
       setFile(droppedFile);
-      setUploadProgress(0);
-      setFilePreview('');
-      setShowPreview(false);
-      
-      // Verificação inicial
-      if (droppedFile.size === 0) {
-        toast.error("O arquivo está vazio.");
-        return;
-      }
-      
-      if (droppedFile.size > 10 * 1024 * 1024) {
-        toast.warning("O arquivo é muito grande (>10MB). O processamento pode demorar.");
-      }
-      
-      // Carregar amostra do conteúdo
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        const lines = content.split('\n').slice(0, 20);
-        setFilePreview(lines.join('\n'));
-      };
-      reader.readAsText(droppedFile.slice(0, 10000));
-    }
-  };
-
-  const handleUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const simulateUploadProgress = () => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploadProgress(progress);
-      
-      if (progress >= 100) {
-        clearInterval(interval);
-        setTimeout(() => {
-          processFile();
-        }, 500);
-      }
-    }, 200);
-  };
-
-  const processFile = async () => {
-    if (!file) return;
-    
-    setIsProcessing(true);
-    console.log("=== INICIANDO PROCESSAMENTO DO ARQUIVO ===");
-    console.log(`Arquivo: ${file.name}, Tamanho: ${file.size} bytes`);
-    
-    try {
-      toast.info("Lendo o arquivo...");
-      const fileContent = await readFileContent(file);
-      
-      if (!fileContent || fileContent.trim() === '') {
-        console.error("Arquivo vazio");
-        toast.error("O arquivo está vazio ou não pôde ser lido.");
-        setIsProcessing(false);
-        return;
-      }
-      
-      console.log(`Conteúdo lido com sucesso. Tamanho: ${fileContent.length} caracteres`);
-      
-      // Validação básica do conteúdo
-      if (!fileContent.includes('|')) {
-        console.error("Arquivo não parece estar no formato SPED (sem delimitadores |)");
-        toast.error("O arquivo não parece estar no formato SPED esperado.");
-        setIsProcessing(false);
-        return;
-      }
-      
-      toast.info("Processando dados do SPED...", { duration: 3000 });
-      const processedData = parseSpedFile(fileContent);
-      
-      if (processedData.records.length === 0) {
-        toast.warning("Não foram encontrados registros contábeis no arquivo.", { duration: 5000 });
-      } else {
-        toast.success(`Arquivo SPED processado com sucesso. ${processedData.records.length} registros encontrados.`);
-      }
-      
-      onFileProcessed(processedData);
-    } catch (error) {
-      console.error("Erro ao processar o arquivo:", error);
-      toast.error("Erro ao processar o arquivo. Verifique se é um arquivo SPED válido.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      console.log("Iniciando leitura do arquivo...");
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        console.log("Arquivo lido com sucesso");
-        const content = event.target?.result as string;
-        resolve(content);
-      };
-      
-      reader.onerror = (error) => {
-        console.error("Erro ao ler arquivo:", error);
-        reject(error);
-      };
-      
-      reader.readAsText(file);
-    });
-  };
-
-  const handleProcess = () => {
-    if (!file) {
-      toast.error("Nenhum arquivo selecionado");
-      return;
-    }
-    
-    simulateUploadProgress();
-  };
-  
-  const togglePreview = () => {
-    if (filePreview && !showPreview) {
-      setShowPreview(true);
-    } else {
-      setShowPreview(false);
     }
   };
 
@@ -267,30 +92,16 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
                 {(file.size / 1024).toFixed(2)} KB
               </p>
               
-              {filePreview && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    togglePreview();
-                  }}
-                  className="text-xs text-primary underline"
-                >
-                  {showPreview ? 'Ocultar amostra' : 'Ver amostra de conteúdo'}
-                </button>
-              )}
+              <FilePreview
+                filePreview={filePreview}
+                showPreview={showPreview}
+                onTogglePreview={togglePreview}
+              />
             </>
           )}
         </div>
       </div>
 
-      {showPreview && filePreview && (
-        <div className="mt-4 p-3 bg-gray-50 border rounded-md">
-          <h4 className="text-sm font-medium mb-2">Amostra do conteúdo:</h4>
-          <pre className="text-xs overflow-x-auto whitespace-pre-wrap" style={{maxHeight: '200px', overflowY: 'auto'}}>
-            {filePreview}
-          </pre>
-        </div>
-      )}
       
       {file && (
         <div className="mt-4 space-y-4">

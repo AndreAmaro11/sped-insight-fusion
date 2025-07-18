@@ -1,36 +1,6 @@
+import { SpedRecord, DREItem, BalancoItem, ReportData } from '@/types/sped';
 
-import { SpedRecord } from '@/components/FileUploader';
-import { formatCurrency } from './spedParser';
-
-// Tipos para DRE e Balanço
-export interface DREItem {
-  categoria: string;
-  descricao: string;
-  valor: number;
-  indentacao: number;
-  isTotalGrupo?: boolean;
-  isTotal?: boolean;
-}
-
-export interface BalancoItem {
-  categoria: string;
-  descricao: string;
-  valor: number;
-  indentacao: number;
-  isTotalGrupo?: boolean;
-  isTotal?: boolean;
-}
-
-export interface ReportData {
-  dre: DREItem[];
-  balanco: {
-    ativo: BalancoItem[];
-    passivoPatrimonial: BalancoItem[];
-  };
-  fiscalYear: number;
-}
-
-// Funções auxiliares para classificação de contas
+// Account classification functions
 const isReceitaOperacional = (code: string) => 
   code.startsWith('3.01') || code.startsWith('3.1');
 
@@ -49,7 +19,6 @@ const isDespesaFinanceira = (code: string) =>
 const isImpostoRenda = (code: string) => 
   code.startsWith('3.06') || code.startsWith('3.6');
 
-// Para balanço:
 const isAtivo = (code: string) => code.startsWith('1');
 const isAtivoCirculante = (code: string) => code.startsWith('1.01') || code.startsWith('1.1');
 const isAtivoNaoCirculante = (code: string) => code.startsWith('1.02') || code.startsWith('1.2');
@@ -58,11 +27,7 @@ const isPassivoCirculante = (code: string) => code.startsWith('2.01') || code.st
 const isPassivoNaoCirculante = (code: string) => code.startsWith('2.02') || code.startsWith('2.2');
 const isPatrimonioLiquido = (code: string) => code.startsWith('2.03') || code.startsWith('2.3');
 
-/**
- * Gera a DRE a partir dos registros SPED
- */
 export const generateDRE = (records: SpedRecord[]): DREItem[] => {
-  // Filtrar apenas as contas de resultado (classe 3)
   const resultadosRecords = records.filter(record => record.accountCode.startsWith('3'));
   
   let dreItems: DREItem[] = [];
@@ -254,15 +219,10 @@ export const generateDRE = (records: SpedRecord[]): DREItem[] => {
   return dreItems;
 };
 
-/**
- * Gera o Balanço Patrimonial a partir dos registros SPED
- */
 export const generateBalanco = (records: SpedRecord[]): { ativo: BalancoItem[], passivoPatrimonial: BalancoItem[] } => {
-  // Separar registros ativos e passivos
   const ativosRecords = records.filter(record => isAtivo(record.accountCode));
   const passivosRecords = records.filter(record => isPassivo(record.accountCode));
   
-  // Preparar arrays para ativo e passivo
   let ativoItems: BalancoItem[] = [];
   let passivoItems: BalancoItem[] = [];
   
@@ -408,11 +368,7 @@ export const generateReports = (records: SpedRecord[], fiscalYear: number): Repo
   };
 };
 
-/**
- * Retorna cor hexadecimal com base no valor (positivo = verde, negativo = vermelho)
- */
 export const getValueColor = (value: number): string => {
-  // Para DRE e Balanço, cor específica
   if (value < 0) {
     return 'text-red-600';
   } else if (value > 0) {
@@ -421,9 +377,6 @@ export const getValueColor = (value: number): string => {
   return 'text-gray-600';
 };
 
-/**
- * Gera estilo com base na indentação e tipo do item
- */
 export const getItemStyles = (item: DREItem | BalancoItem): string => {
   let styles = '';
   

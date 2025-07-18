@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { SpedRecord } from './FileUploader';
-import { formatCurrency } from '@/utils/spedParser';
+import { SpedRecord } from '@/types/sped';
+import { formatCurrency } from '@/services/spedService';
 import {
   Pagination,
   PaginationContent,

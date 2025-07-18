@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { BalancoItem } from '@/utils/reportUtils';
-import { formatCurrency } from '@/utils/spedParser';
-import { getValueColor, getItemStyles } from '@/utils/reportUtils';
+import { BalancoItem } from '@/types/sped';
+import { formatCurrency } from '@/services/spedService';
+import { getValueColor, getItemStyles } from '@/services/reportService';
 
 interface SpedBalancoProps {
   ativo: BalancoItem[];
