@@ -56,6 +56,15 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           
+          {/* Credenciais de teste */}
+          <div className="mx-6 mb-4 p-4 bg-muted rounded-lg">
+            <h3 className="text-sm font-medium mb-2">Credenciais para teste:</h3>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <div><strong>Admin:</strong> admin@example.com / admin123</div>
+              <div><strong>Usuário:</strong> user@example.com / user123</div>
+            </div>
+          </div>
+          
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-1">
