@@ -14,7 +14,325 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          account_code: string
+          account_level: number | null
+          account_name: string
+          account_type: string | null
+          created_at: string
+          id: string
+          is_synthetic: boolean | null
+          parent_account_code: string | null
+          upload_id: string
+        }
+        Insert: {
+          account_code: string
+          account_level?: number | null
+          account_name: string
+          account_type?: string | null
+          created_at?: string
+          id?: string
+          is_synthetic?: boolean | null
+          parent_account_code?: string | null
+          upload_id: string
+        }
+        Update: {
+          account_code?: string
+          account_level?: number | null
+          account_name?: string
+          account_type?: string | null
+          created_at?: string
+          id?: string
+          is_synthetic?: boolean | null
+          parent_account_code?: string | null
+          upload_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "sped_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          state: string | null
+          updated_at: string
+          zipcode: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zipcode?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zipcode?: string | null
+        }
+        Relationships: []
+      }
+      generated_reports: {
+        Row: {
+          created_at: string
+          fiscal_year: number
+          generated_at: string
+          generated_by: string
+          id: string
+          report_data: Json
+          report_type: string
+          upload_id: string
+        }
+        Insert: {
+          created_at?: string
+          fiscal_year: number
+          generated_at?: string
+          generated_by: string
+          id?: string
+          report_data: Json
+          report_type: string
+          upload_id: string
+        }
+        Update: {
+          created_at?: string
+          fiscal_year?: number
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          report_data?: Json
+          report_type?: string
+          upload_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_reports_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "sped_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          role: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sped_records: {
+        Row: {
+          account_code: string
+          account_description: string | null
+          block_type: string | null
+          created_at: string
+          credit_amount: number | null
+          debit_amount: number | null
+          final_balance: number | null
+          fiscal_year: number | null
+          id: string
+          record_date: string | null
+          upload_id: string
+        }
+        Insert: {
+          account_code: string
+          account_description?: string | null
+          block_type?: string | null
+          created_at?: string
+          credit_amount?: number | null
+          debit_amount?: number | null
+          final_balance?: number | null
+          fiscal_year?: number | null
+          id?: string
+          record_date?: string | null
+          upload_id: string
+        }
+        Update: {
+          account_code?: string
+          account_description?: string | null
+          block_type?: string | null
+          created_at?: string
+          credit_amount?: number | null
+          debit_amount?: number | null
+          final_balance?: number | null
+          fiscal_year?: number | null
+          id?: string
+          record_date?: string | null
+          upload_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sped_records_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "sped_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sped_uploads: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          error_message: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          fiscal_year: number | null
+          id: string
+          processed_at: string | null
+          processing_status: string | null
+          sped_version: string | null
+          total_records: number | null
+          updated_at: string
+          upload_date: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          fiscal_year?: number | null
+          id?: string
+          processed_at?: string | null
+          processing_status?: string | null
+          sped_version?: string | null
+          total_records?: number | null
+          updated_at?: string
+          upload_date?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          fiscal_year?: number | null
+          id?: string
+          processed_at?: string | null
+          processing_status?: string | null
+          sped_version?: string | null
+          total_records?: number | null
+          updated_at?: string
+          upload_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sped_uploads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
