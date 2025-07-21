@@ -1,18 +1,26 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { login } from '@/utils/authUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,11 +33,16 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await login(email, password);
-      toast.success("Login realizado com sucesso!");
-      navigate('/dashboard');
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast.error("Falha no login. Por favor, verifique suas credenciais.");
+        console.error("Login error:", error);
+      } else {
+        toast.success("Login realizado com sucesso!");
+        navigate('/dashboard');
+      }
     } catch (error) {
-      toast.error("Falha no login. Por favor, verifique suas credenciais.");
+      toast.error("Erro inesperado. Tente novamente.");
       console.error("Login error:", error);
     } finally {
       setIsLoading(false);
@@ -56,12 +69,12 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           
-          {/* Credenciais de teste */}
+          {/* Info sobre cadastro */}
           <div className="mx-6 mb-4 p-4 bg-muted rounded-lg">
-            <h3 className="text-sm font-medium mb-2">Credenciais para teste:</h3>
+            <h3 className="text-sm font-medium mb-2">Novo usuário?</h3>
             <div className="space-y-1 text-xs text-muted-foreground">
-              <div><strong>Admin:</strong> admin@example.com / admin123</div>
-              <div><strong>Usuário:</strong> user@example.com / user123</div>
+              <div>Cadastre-se usando um email válido.</div>
+              <div>Você receberá um email de confirmação.</div>
             </div>
           </div>
           

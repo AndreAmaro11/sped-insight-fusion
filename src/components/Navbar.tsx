@@ -10,12 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getCurrentUser, logout } from '@/utils/authUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentUser = getCurrentUser();
+  const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Navigation items
@@ -29,8 +29,8 @@ const Navbar = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
@@ -68,7 +68,7 @@ const Navbar = () => {
                   </Link>
                 ))}
                 
-                {currentUser?.role === 'admin' && (
+                {user?.user_metadata?.role === 'admin' && (
                   <Link
                     to="/administration"
                     className={`px-3 py-2 text-sm font-medium rounded-md ${
@@ -89,7 +89,7 @@ const Navbar = () => {
                     <Button variant="ghost" className="relative rounded-full">
                       <span className="sr-only">Abrir menu do usuário</span>
                       <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                        {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                        {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -97,10 +97,10 @@ const Navbar = () => {
                     <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <span>{currentUser?.name}</span>
+                      <span>{user?.user_metadata?.full_name || 'Usuário'}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <span>{currentUser?.email}</span>
+                      <span>{user?.email}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={handleLogout}>
@@ -179,7 +179,7 @@ const Navbar = () => {
               </Link>
             ))}
             
-            {currentUser?.role === 'admin' && (
+            {user?.user_metadata?.role === 'admin' && (
               <Link
                 to="/administration"
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
@@ -195,10 +195,10 @@ const Navbar = () => {
             
             <div className="border-t border-gray-200 pt-2">
               <div className="px-3 py-2 text-base font-medium text-gray-600">
-                {currentUser?.name}
+                {user?.user_metadata?.full_name || 'Usuário'}
               </div>
               <div className="px-3 py-2 text-sm text-gray-500">
-                {currentUser?.email}
+                {user?.email}
               </div>
               <Button
                 variant="ghost"
