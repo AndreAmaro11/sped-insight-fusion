@@ -31,62 +31,65 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
-import { isAuthenticated } from '@/utils/authUtils';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-interface Company {
-  id: number;
-  name: string;
-  cnpj: string;
-  email: string;
-  phone: string;
-  createdAt: string;
-}
-
-// Mock data for companies
-const mockCompanies: Company[] = [
-  {
-    id: 1,
-    name: 'Empresa ABC Ltda',
-    cnpj: '12.345.678/0001-90',
-    email: 'contato@empresaabc.com',
-    phone: '(11) 98765-4321',
-    createdAt: '2025-04-20'
-  },
-  {
-    id: 2,
-    name: 'XYZ Comércio S.A.',
-    cnpj: '98.765.432/0001-10',
-    email: 'contato@xyzcomercio.com',
-    phone: '(21) 91234-5678',
-    createdAt: '2025-04-18'
-  },
-  {
-    id: 3,
-    name: 'Indústria QWE Ltda',
-    cnpj: '45.678.901/0001-23',
-    email: 'contato@qweindustria.com',
-    phone: '(31) 93456-7890',
-    createdAt: '2025-04-15'
-  }
-];
+type Company = Database['public']['Tables']['companies']['Row'];
 
 const CompanyRegistration = () => {
   const navigate = useNavigate();
-  const [companies, setCompanies] = useState<Company[]>(mockCompanies);
+  const { user, loading } = useAuth();
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     cnpj: '',
     email: '',
-    phone: ''
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipcode: ''
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (!loading && !user) {
       navigate('/login');
     }
-  }, [navigate]);
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchCompanies();
+    }
+  }, [user]);
+
+  const fetchCompanies = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar empresas:', error);
+        toast.error('Erro ao carregar empresas');
+        return;
+      }
+
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar empresas:', error);
+      toast.error('Erro ao carregar empresas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle input changes for form fields
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,47 +120,107 @@ const CompanyRegistration = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
-    if (!formData.name || !formData.cnpj || !formData.email || !formData.phone) {
-      toast.error("Por favor, preencha todos os campos");
+    if (!user) {
+      toast.error("Usuário não autenticado");
       return;
     }
     
-    // Add new company
-    const newCompany: Company = {
-      id: companies.length > 0 ? Math.max(...companies.map(c => c.id)) + 1 : 1,
-      name: formData.name,
-      cnpj: formData.cnpj,
-      email: formData.email,
-      phone: formData.phone,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+    // Validate form
+    if (!formData.name || !formData.cnpj || !formData.email) {
+      toast.error("Por favor, preencha os campos obrigatórios");
+      return;
+    }
     
-    setCompanies([newCompany, ...companies]);
-    
-    // Reset form
-    setFormData({
-      name: '',
-      cnpj: '',
-      email: '',
-      phone: ''
-    });
-    
-    // Close dialog
-    setIsDialogOpen(false);
-    
-    toast.success("Empresa cadastrada com sucesso!");
+    try {
+      setIsSubmitting(true);
+      
+      const { data, error } = await supabase
+        .from('companies')
+        .insert({
+          name: formData.name,
+          cnpj: formData.cnpj,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipcode: formData.zipcode,
+          created_by: user.id
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar empresa:', error);
+        toast.error("Erro ao cadastrar empresa");
+        return;
+      }
+
+      // Add to local state
+      setCompanies([data, ...companies]);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        cnpj: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        zipcode: ''
+      });
+      
+      // Close dialog
+      setIsDialogOpen(false);
+      
+      toast.success("Empresa cadastrada com sucesso!");
+    } catch (error) {
+      console.error('Erro ao cadastrar empresa:', error);
+      toast.error("Erro ao cadastrar empresa");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (companyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
+
+      if (error) {
+        console.error('Erro ao excluir empresa:', error);
+        toast.error("Erro ao excluir empresa");
+        return;
+      }
+
+      setCompanies(companies.filter(c => c.id !== companyId));
+      toast.success("Empresa removida com sucesso!");
+    } catch (error) {
+      console.error('Erro ao excluir empresa:', error);
+      toast.error("Erro ao excluir empresa");
+    }
   };
 
   // Filter companies based on search term
   const filteredCompanies = companies.filter(company => 
     company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    company.cnpj.includes(searchTerm) ||
-    company.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (company.cnpj && company.cnpj.includes(searchTerm)) ||
+    (company.email && company.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div>Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -245,28 +308,54 @@ const CompanyRegistration = () => {
                         required
                       />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="phone" className="text-right">
-                        Telefone
-                      </Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        className="col-span-3"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="(11) 98765-4321"
-                        required
-                      />
-                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                       <Label htmlFor="phone" className="text-right">
+                         Telefone
+                       </Label>
+                       <Input
+                         id="phone"
+                         name="phone"
+                         className="col-span-3"
+                         value={formData.phone}
+                         onChange={handleInputChange}
+                         placeholder="(11) 98765-4321"
+                       />
+                     </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                       <Label htmlFor="city" className="text-right">
+                         Cidade
+                       </Label>
+                       <Input
+                         id="city"
+                         name="city"
+                         className="col-span-3"
+                         value={formData.city}
+                         onChange={handleInputChange}
+                       />
+                     </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                       <Label htmlFor="state" className="text-right">
+                         Estado
+                       </Label>
+                       <Input
+                         id="state"
+                         name="state"
+                         className="col-span-3"
+                         value={formData.state}
+                         onChange={handleInputChange}
+                         placeholder="SP"
+                       />
+                     </div>
                   </div>
                   
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsDialogOpen(false)} type="button">
-                      Cancelar
-                    </Button>
-                    <Button type="submit">Cadastrar</Button>
-                  </DialogFooter>
+                   <DialogFooter>
+                     <Button variant="outline" onClick={() => setIsDialogOpen(false)} type="button">
+                       Cancelar
+                     </Button>
+                     <Button type="submit" disabled={isSubmitting}>
+                       {isSubmitting ? 'Cadastrando...' : 'Cadastrar'}
+                     </Button>
+                   </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
@@ -294,40 +383,39 @@ const CompanyRegistration = () => {
                     </TableRow>
                   </TableHeader>
                   
-                  <TableBody>
-                    {filteredCompanies.length > 0 ? (
-                      filteredCompanies.map((company) => (
-                        <TableRow key={company.id}>
-                          <TableCell className="font-medium">{company.id}</TableCell>
-                          <TableCell>{company.name}</TableCell>
-                          <TableCell>{company.cnpj}</TableCell>
-                          <TableCell className="hidden md:table-cell">{company.email}</TableCell>
-                          <TableCell className="hidden md:table-cell">{company.phone}</TableCell>
-                          <TableCell className="hidden md:table-cell">{company.createdAt}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => toast.info("Editar empresa " + company.name)}
-                              >
-                                Editar
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                  setCompanies(companies.filter(c => c.id !== company.id));
-                                  toast.success("Empresa removida com sucesso!");
-                                }}
-                              >
-                                Excluir
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                   <TableBody>
+                     {filteredCompanies.length > 0 ? (
+                       filteredCompanies.map((company) => (
+                         <TableRow key={company.id}>
+                           <TableCell className="font-medium">{company.id.slice(0, 8)}...</TableCell>
+                           <TableCell>{company.name}</TableCell>
+                           <TableCell>{company.cnpj}</TableCell>
+                           <TableCell className="hidden md:table-cell">{company.email}</TableCell>
+                           <TableCell className="hidden md:table-cell">{company.phone}</TableCell>
+                           <TableCell className="hidden md:table-cell">
+                             {new Date(company.created_at).toLocaleDateString('pt-BR')}
+                           </TableCell>
+                           <TableCell>
+                             <div className="flex items-center space-x-2">
+                               <Button 
+                                 variant="outline" 
+                                 size="sm"
+                                 onClick={() => toast.info("Editar empresa " + company.name)}
+                               >
+                                 Editar
+                               </Button>
+                               <Button 
+                                 variant="ghost" 
+                                 size="sm" 
+                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                 onClick={() => handleDelete(company.id)}
+                               >
+                                 Excluir
+                               </Button>
+                             </div>
+                           </TableCell>
+                         </TableRow>
+                       ))
                     ) : (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-6 text-gray-500">

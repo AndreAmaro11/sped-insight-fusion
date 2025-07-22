@@ -1,19 +1,98 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
+
+type SpedUpload = Database['public']['Tables']['sped_uploads']['Row'];
+
+interface RecentFile extends SpedUpload {
+  companies?: {
+    id: string;
+    name: string;
+    cnpj: string;
+  } | null;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
   
   useEffect(() => {
     if (!loading && !user) {
       navigate('/login');
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRecentFiles();
+    }
+  }, [user]);
+
+  const fetchRecentFiles = async () => {
+    try {
+      setIsLoadingFiles(true);
+      
+      const { data, error } = await supabase
+        .from('sped_uploads')
+        .select(`
+          *,
+          companies (
+            id,
+            name,
+            cnpj
+          )
+        `)
+        .order('upload_date', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Erro ao buscar arquivos recentes:', error);
+        return;
+      }
+
+      setRecentFiles(data as RecentFile[] || []);
+    } catch (error) {
+      console.error('Erro ao buscar arquivos recentes:', error);
+    } finally {
+      setIsLoadingFiles(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Processado
+          </span>
+        );
+      case 'processing':
+        return (
+          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+            Processando
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+            Erro
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+            Pendente
+          </span>
+        );
+    }
+  };
 
   if (loading) {
     return (
@@ -145,46 +224,41 @@ const Dashboard = () => {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          SPED_EMPRESA_ABC_2023.txt
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          Empresa ABC Ltda
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          2023
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          28/04/2025
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Processado
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          SPED_EMPRESA_XYZ_2023.txt
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          Empresa XYZ S.A.
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          2023
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          27/04/2025
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Processado
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
+                     <tbody className="bg-white divide-y divide-gray-200">
+                       {isLoadingFiles ? (
+                         <tr>
+                           <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                             Carregando arquivos recentes...
+                           </td>
+                         </tr>
+                       ) : recentFiles.length > 0 ? (
+                         recentFiles.map((file) => (
+                           <tr key={file.id} className="hover:bg-gray-50">
+                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                               {file.file_name}
+                             </td>
+                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                               {file.companies?.name || 'Não informado'}
+                             </td>
+                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                               {file.fiscal_year || '-'}
+                             </td>
+                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                               {new Date(file.upload_date).toLocaleDateString('pt-BR')}
+                             </td>
+                             <td className="px-6 py-4 whitespace-nowrap">
+                               {getStatusBadge(file.processing_status || 'pending')}
+                             </td>
+                           </tr>
+                         ))
+                       ) : (
+                         <tr>
+                           <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                             Nenhum arquivo encontrado
+                           </td>
+                         </tr>
+                       )}
+                     </tbody>
                   </table>
                 </div>
               </CardContent>
