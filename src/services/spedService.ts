@@ -1,5 +1,6 @@
 import { SpedProcessedData, SpedRecord, FileStructure } from '@/types/sped';
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Utility functions
 const normalizeAccountCode = (code: string): string => {
@@ -103,6 +104,84 @@ const analyzeDataQuality = (records: SpedRecord[]) => {
   console.log(`Grupos contábeis encontrados: ${Array.from(accountPatterns).join(', ')}`);
 };
 
+const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.warn("Usuário não autenticado - dados não salvos no banco");
+      return;
+    }
+
+    // Criar registro de upload
+    const { data: uploadData, error: uploadError } = await supabase
+      .from('sped_uploads')
+      .insert({
+        user_id: user.id,
+        file_name: fileName,
+        file_size: fileSize,
+        fiscal_year: processedData.fiscalYear,
+        total_records: processedData.records.length,
+        processing_status: 'completed',
+        processed_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (uploadError) {
+      console.error('Erro ao criar upload:', uploadError);
+      toast.error("Erro ao salvar dados do upload");
+      return;
+    }
+
+    // Salvar registros SPED
+    const spedRecords = processedData.records.map(record => ({
+      upload_id: uploadData.id,
+      account_code: record.accountCode,
+      account_description: record.accountDescription,
+      final_balance: record.finalBalance,
+      block_type: record.block,
+      fiscal_year: record.fiscalYear
+    }));
+
+    const { error: recordsError } = await supabase
+      .from('sped_records')
+      .insert(spedRecords);
+
+    if (recordsError) {
+      console.error('Erro ao salvar registros:', recordsError);
+      toast.error("Erro ao salvar registros SPED");
+      return;
+    }
+
+    // Salvar plano de contas
+    const accounts = Array.from(new Set(processedData.records.map(r => ({
+      code: r.accountCode,
+      name: r.accountDescription
+    })))).map(account => ({
+      upload_id: uploadData.id,
+      account_code: account.code,
+      account_name: account.name,
+      account_level: account.code.split('.').length
+    }));
+
+    const { error: accountsError } = await supabase
+      .from('chart_of_accounts')
+      .insert(accounts);
+
+    if (accountsError) {
+      console.error('Erro ao salvar plano de contas:', accountsError);
+    }
+
+    console.log("Dados salvos com sucesso no banco de dados");
+    toast.success("Dados processados e salvos com sucesso!");
+
+  } catch (error) {
+    console.error('Erro ao salvar no banco:', error);
+    toast.error("Erro ao salvar dados no banco");
+  }
+};
+
 const processMockData = (fiscalYear: number): SpedRecord[] => {
   const mockYear = fiscalYear || new Date().getFullYear();
   
@@ -117,7 +196,7 @@ const processMockData = (fiscalYear: number): SpedRecord[] => {
   ];
 };
 
-export const parseSpedFile = (fileContent: string): SpedProcessedData => {
+export const parseSpedFile = async (fileContent: string, fileName: string): Promise<SpedProcessedData> => {
   console.log("Iniciando processamento do arquivo SPED");
   
   if (!fileContent || fileContent.trim() === '') {
@@ -345,10 +424,15 @@ export const parseSpedFile = (fileContent: string): SpedProcessedData => {
   
   analyzeDataQuality(records);
   
-  return { 
+  // Salvar no banco de dados
+  const processedData = { 
     fiscalYear,
     records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
   };
+  
+  await saveSpedDataToDatabase(processedData, fileName, fileContent.length);
+  
+  return processedData;
 };
 
 export const formatCurrency = (value: number): string => {

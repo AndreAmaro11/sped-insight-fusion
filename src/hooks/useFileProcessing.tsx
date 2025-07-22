@@ -126,7 +126,7 @@ export const useFileProcessing = (onFileProcessed: (data: SpedProcessedData) => 
       }
       
       toast.info("Processando dados do SPED...", { duration: 3000 });
-      const processedData = parseSpedFile(fileContent);
+      const processedData = await parseSpedFile(fileContent, fileState.file.name);
       
       if (processedData.records.length === 0) {
         toast.warning("Não foram encontrados registros contábeis no arquivo.", { duration: 5000 });
