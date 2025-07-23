@@ -99,10 +99,13 @@ export type Database = {
           address: string | null
           city: string | null
           cnpj: string | null
+          contract_id: string | null
           created_at: string
           created_by: string | null
           email: string | null
           id: string
+          is_active: boolean | null
+          is_deleted: boolean | null
           name: string
           phone: string | null
           state: string | null
@@ -113,10 +116,13 @@ export type Database = {
           address?: string | null
           city?: string | null
           cnpj?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           id?: string
+          is_active?: boolean | null
+          is_deleted?: boolean | null
           name: string
           phone?: string | null
           state?: string | null
@@ -127,15 +133,56 @@ export type Database = {
           address?: string | null
           city?: string | null
           cnpj?: string | null
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
           id?: string
+          is_active?: boolean | null
+          is_deleted?: boolean | null
           name?: string
           phone?: string | null
           state?: string | null
           updated_at?: string
           zipcode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
