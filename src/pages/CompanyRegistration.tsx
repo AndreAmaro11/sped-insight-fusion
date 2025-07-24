@@ -291,10 +291,17 @@ const CompanyRegistration = () => {
 
   const handleSoftDelete = async (companyId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
       const { error } = await supabase
         .from('companies')
         .update({ is_deleted: true })
-        .eq('id', companyId);
+        .eq('id', companyId)
+        .eq('created_by', user.id);
 
       if (error) {
         console.error('Erro ao marcar empresa como excluída:', error);
