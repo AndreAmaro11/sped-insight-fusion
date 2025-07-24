@@ -153,14 +153,15 @@ const CompanyRegistration = () => {
       value = value.slice(0, 14);
     }
     
-    if (value.length > 12) {
+    // Aplicar formatação progressiva
+    if (value.length >= 14) {
       value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
-    } else if (value.length > 8) {
-      value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d*)$/, '$1.$2.$3/$4');
-    } else if (value.length > 5) {
-      value = value.replace(/^(\d{2})(\d{3})(\d*)$/, '$1.$2.$3');
-    } else if (value.length > 2) {
-      value = value.replace(/^(\d{2})(\d*)$/, '$1.$2');
+    } else if (value.length >= 9) {
+      value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, '$1.$2.$3/$4');
+    } else if (value.length >= 6) {
+      value = value.replace(/^(\d{2})(\d{3})(\d+)$/, '$1.$2.$3');
+    } else if (value.length >= 3) {
+      value = value.replace(/^(\d{2})(\d+)$/, '$1.$2');
     }
     
     setFormData(prev => ({ ...prev, cnpj: value }));
