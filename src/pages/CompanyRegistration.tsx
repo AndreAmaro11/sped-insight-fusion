@@ -297,6 +297,24 @@ const CompanyRegistration = () => {
         return;
       }
 
+      // Primeiro verificar se a empresa pertence ao usuário
+      const { data: company, error: fetchError } = await supabase
+        .from('companies')
+        .select('created_by')
+        .eq('id', companyId)
+        .single();
+
+      if (fetchError) {
+        console.error('Erro ao buscar empresa:', fetchError);
+        toast.error("Erro ao buscar empresa");
+        return;
+      }
+
+      if (company.created_by !== user.id) {
+        toast.error("Você não tem permissão para excluir esta empresa");
+        return;
+      }
+
       const { error } = await supabase
         .from('companies')
         .update({ is_deleted: true })
