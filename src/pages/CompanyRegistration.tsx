@@ -476,12 +476,12 @@ const CompanyRegistration = () => {
                         <Label htmlFor="contract_id" className="text-right">
                           Contrato
                         </Label>
-                        <Select value={formData.contract_id} onValueChange={(value) => setFormData(prev => ({ ...prev, contract_id: value }))}>
+                        <Select value={formData.contract_id || 'none'} onValueChange={(value) => setFormData(prev => ({ ...prev, contract_id: value === 'none' ? '' : value }))}>
                           <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="Selecione um contrato" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Sem contrato</SelectItem>
+                            <SelectItem value="none">Sem contrato</SelectItem>
                             {contracts.map((contract) => (
                               <SelectItem key={contract.id} value={contract.id}>
                                 {contract.name}
