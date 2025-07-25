@@ -10,10 +10,11 @@ import { useAuth } from '@/hooks/useAuth';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, resetPassword, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -46,6 +47,30 @@ const Login = () => {
       console.error("Login error:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      toast.error("Por favor, digite seu email primeiro");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    
+    try {
+      const { error } = await resetPassword(email);
+      if (error) {
+        toast.error("Erro ao enviar email de recuperação");
+        console.error("Reset password error:", error);
+      } else {
+        toast.success("Email de recuperação enviado! Verifique sua caixa de entrada.");
+      }
+    } catch (error) {
+      toast.error("Erro inesperado. Tente novamente.");
+      console.error("Reset password error:", error);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -111,6 +136,16 @@ const Login = () => {
                 disabled={isLoading}
               >
                 {isLoading ? "Processando..." : "Entrar"}
+              </Button>
+              
+              <Button 
+                type="button"
+                variant="outline" 
+                className="w-full" 
+                disabled={isResettingPassword || !email}
+                onClick={handleResetPassword}
+              >
+                {isResettingPassword ? "Enviando..." : "Esqueci minha senha"}
               </Button>
               
               <div className="text-center text-sm">
