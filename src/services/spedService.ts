@@ -1,4 +1,6 @@
-/*import { SpedProcessedData, SpedRecord, FileStructure } from '@/types/sped';
+/*
+***Correções Amaro***
+import { SpedProcessedData, SpedRecord, FileStructure } from '@/types/sped';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
