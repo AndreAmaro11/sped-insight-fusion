@@ -1,4 +1,4 @@
-import { SpedProcessedData, SpedRecord, FileStructure } from '@/types/sped';
+/*import { SpedProcessedData, SpedRecord, FileStructure } from '@/types/sped';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -452,4 +452,130 @@ export const formatCurrency = (value: number): string => {
     console.error('Erro na formatação monetária:', e);
     return 'R$ 0,00';
   }
+};
+*/
+
+
+// src/services/spedService.ts
+
+// --- INTERFACES (Tipos de Dados) ---
+// Define a estrutura para cada linha do Balanço Patrimonial
+export interface BalancoItem {
+  nivel: number;
+  descricao: string;
+  saldoFinal: number;
+}
+
+// Define a estrutura para cada linha da DRE
+export interface DREItem {
+  ordem: number;
+  descricao: string;
+  saldoAtual: number;
+}
+
+// Define a estrutura do objeto retornado pela função principal
+export interface SpedReports {
+  balanco: {
+    ativo: BalancoItem[];
+    passivo: BalancoItem[];
+  };
+  dre: DREItem[];
+}
+
+// --- FUNÇÃO AUXILIAR ---
+/**
+ * Converte uma string de valor monetário no formato brasileiro (ex: "1.234,56") para um número.
+ * @param valorStr String do valor a ser convertido.
+ * @returns O valor convertido para número.
+ */
+function parseCurrency(valorStr: string): number {
+  if (!valorStr || typeof valorStr !== 'string') {
+    return 0;
+  }
+  // Remove o separador de milhar (.) e substitui a vírgula decimal (,) por ponto (.)
+  const valorLimpo = valorStr.replace(/\./g, '').replace(',', '.');
+  return parseFloat(valorLimpo);
+}
+
+
+// --- FUNÇÃO PRINCIPAL DE ANÁLISE ---
+/**
+ * Analisa o conteúdo de um arquivo SPED Contábil (ECD) e extrai os dados
+ * do Balanço Patrimonial (J100) e da DRE (J150).
+ * @param fileContent O conteúdo completo do arquivo .txt como uma string.
+ * @returns Um objeto contendo os dados estruturados do Balanço e da DRE.
+ */
+export const analisarSpedContabil = (fileContent: string): SpedReports => {
+  const linhas = fileContent.split('\n');
+
+  const balancoAtivo: BalancoItem[] = [];
+  const balancoPassivo: BalancoItem[] = [];
+  const dreItens: DREItem[] = [];
+
+  // Itera sobre cada linha do arquivo SPED
+  for (const linha of linhas) {
+    
+    // --- LÓGICA PARA O BALANÇO PATRIMONIAL (Registro J100) ---
+    if (linha.startsWith('|J100|')) {
+      const campos = linha.split('|');
+      // O primeiro e o último campo são vazios por causa do pipe no início e fim
+      // |J100|COD_AGL|IND_COD_AGL|NIVEL_AGL|COD_AGL_SUP|IND_GRP_BAL|DESCR_COD_AGL|VL_CTA_INI|IND_DC_CTA_INI|VL_CTA_FIN|IND_DC_CTA_FIN|
+      //  [0]   [1]       [2]        [3]        [4]         [5]         [6]           [7]          [8]            [9]          [10]         [11]
+      
+      const nivel = parseInt(campos[4], 10);
+      const grupo = campos[6]; // 'A' para Ativo, 'P' para Passivo
+      const descricao = campos[7];
+      const saldoFinal = parseCurrency(campos[10]);
+
+      const item: BalancoItem = { nivel, descricao, saldoFinal };
+
+      if (grupo === 'A') {
+        balancoAtivo.push(item);
+      } else if (grupo === 'P') {
+        balancoPassivo.push(item);
+      }
+    }
+
+    // --- LÓGICA PARA A DRE (Registro J150) ---
+    if (linha.startsWith('|J150|')) {
+      const campos = linha.split('|');
+      // |J150|NU_ORDEM|COD_AGL|...|DESCR_COD_AGL|...|VL_CTA_FIN|IND_DC_CTA_FIN|IND_GRP_DRE|
+      //  [0]   [1]       [2]     [3]     ...     [7]           ...     [10]       [11]          [12]
+
+      const ordem = parseInt(campos[2], 10);
+      const descricao = campos[7];
+      let saldoAtual = parseCurrency(campos[10]);
+      const indicadorGrupo = campos[12]; // 'D' para Despesa, 'R' para Receita
+      
+      // Despesas (D) devem ter valor negativo na DRE
+      if (indicadorGrupo === 'D') {
+        saldoAtual = -Math.abs(saldoAtual);
+      }
+
+      dreItens.push({ ordem, descricao, saldoAtual });
+    }
+  }
+
+  // Ordena os itens da DRE com base no campo NU_ORDEM para garantir a apresentação correta
+  const dreOrdenada = dreItens.sort((a, b) => a.ordem - b.ordem);
+
+  return {
+    balanco: {
+      ativo: balancoAtivo,
+      passivo: balancoPassivo,
+    },
+    dre: dreOrdenada,
+  };
+};
+
+/**
+ * Formata um número para a moeda brasileira (BRL).
+ * @param value O número a ser formatado.
+ * @returns Uma string formatada como R$ 1.234,56.
+ */
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
 };
