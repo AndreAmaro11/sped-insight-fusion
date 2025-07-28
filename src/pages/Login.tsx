@@ -90,7 +90,7 @@ const Login = () => {
           <CardHeader>
             <CardTitle>SPED Insight Fusion</CardTitle>
             <CardDescription>
-              Sistema de análise de SPED Contábil
+              Sistema de análise de SPED Contábil_Amaro
             </CardDescription>
           </CardHeader>
           
