@@ -28,6 +28,54 @@ const isPassivoNaoCirculante = (code: string) => code.startsWith('2.02') || code
 const isPatrimonioLiquido = (code: string) => code.startsWith('2.03') || code.startsWith('2.3');
 
 export const generateDRE = (records: SpedRecord[]): DREItem[] => {
+  // Filtrar registros do Bloco J150 (DRE)
+  const dreRecords = records.filter(r => r.block === 'J150');
+  
+  if (dreRecords.length === 0) {
+    console.warn("Nenhum registro J150 encontrado para geração da DRE");
+    // Fallback para lógica anterior se não houver registros J150
+    return generateDREFallback(records);
+  }
+
+  let dreItems: DREItem[] = [];
+  
+  // Adicionar todos os itens do J150 na ordem que aparecem
+  dreRecords.forEach(record => {
+    dreItems.push({
+      categoria: record.accountCode,
+      descricao: record.accountDescription,
+      valor: record.finalBalance,
+      indentacao: 0
+    });
+  });
+
+  // Ordenar por código de aglutinação
+  dreItems.sort((a, b) => a.categoria.localeCompare(b.categoria));
+
+  // Calcular resultado líquido (último item da DRE)
+  const totalReceitas = dreItems
+    .filter(item => item.valor > 0)
+    .reduce((sum, item) => sum + item.valor, 0);
+    
+  const totalDespesas = dreItems
+    .filter(item => item.valor < 0)
+    .reduce((sum, item) => sum + Math.abs(item.valor), 0);
+    
+  const resultadoLiquido = totalReceitas - totalDespesas;
+  
+  dreItems.push({
+    categoria: 'resultado_liquido',
+    descricao: 'RESULTADO LÍQUIDO',
+    valor: resultadoLiquido,
+    indentacao: 0,
+    isTotal: true
+  });
+
+  return dreItems;
+};
+
+// Função de fallback para quando não há registros J150
+const generateDREFallback = (records: SpedRecord[]): DREItem[] => {
   const resultadosRecords = records.filter(record => record.accountCode.startsWith('3'));
   
   let dreItems: DREItem[] = [];
@@ -36,178 +84,73 @@ export const generateDRE = (records: SpedRecord[]): DREItem[] => {
   const receitasOperacionais = resultadosRecords.filter(r => isReceitaOperacional(r.accountCode));
   let totalReceitasOperacionais = receitasOperacionais.reduce((sum, r) => sum + r.finalBalance, 0);
   
-  dreItems.push({ categoria: 'receitasOperacionais', descricao: 'RECEITAS OPERACIONAIS', valor: 0, indentacao: 0 });
-  receitasOperacionais.forEach(r => {
+  if (receitasOperacionais.length > 0) {
+    dreItems.push({ categoria: 'receitasOperacionais', descricao: 'RECEITAS OPERACIONAIS', valor: 0, indentacao: 0 });
+    receitasOperacionais.forEach(r => {
+      dreItems.push({ 
+        categoria: 'receitasOperacionais', 
+        descricao: r.accountDescription, 
+        valor: Math.abs(r.finalBalance), 
+        indentacao: 1 
+      });
+    });
     dreItems.push({ 
       categoria: 'receitasOperacionais', 
-      descricao: r.accountDescription, 
-      valor: Math.abs(r.finalBalance), 
-      indentacao: 1 
+      descricao: 'TOTAL RECEITAS OPERACIONAIS', 
+      valor: Math.abs(totalReceitasOperacionais), 
+      indentacao: 0, 
+      isTotalGrupo: true 
     });
-  });
-  dreItems.push({ 
-    categoria: 'receitasOperacionais', 
-    descricao: 'TOTAL RECEITAS OPERACIONAIS', 
-    valor: Math.abs(totalReceitasOperacionais), 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
+  }
   
   // Custos Operacionais
   const custosOperacionais = resultadosRecords.filter(r => isCustoOperacional(r.accountCode));
   let totalCustosOperacionais = custosOperacionais.reduce((sum, r) => sum + r.finalBalance, 0);
   
-  dreItems.push({ categoria: 'custosOperacionais', descricao: 'CUSTOS OPERACIONAIS', valor: 0, indentacao: 0 });
-  custosOperacionais.forEach(r => {
+  if (custosOperacionais.length > 0) {
+    dreItems.push({ categoria: 'custosOperacionais', descricao: 'CUSTOS OPERACIONAIS', valor: 0, indentacao: 0 });
+    custosOperacionais.forEach(r => {
+      dreItems.push({ 
+        categoria: 'custosOperacionais', 
+        descricao: r.accountDescription, 
+        valor: Math.abs(r.finalBalance), 
+        indentacao: 1 
+      });
+    });
     dreItems.push({ 
       categoria: 'custosOperacionais', 
-      descricao: r.accountDescription, 
-      valor: Math.abs(r.finalBalance), 
-      indentacao: 1 
+      descricao: 'TOTAL CUSTOS OPERACIONAIS', 
+      valor: Math.abs(totalCustosOperacionais), 
+      indentacao: 0, 
+      isTotalGrupo: true 
     });
-  });
-  dreItems.push({ 
-    categoria: 'custosOperacionais', 
-    descricao: 'TOTAL CUSTOS OPERACIONAIS', 
-    valor: Math.abs(totalCustosOperacionais), 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Resultado Bruto
-  const resultadoBruto = Math.abs(totalReceitasOperacionais) - Math.abs(totalCustosOperacionais);
-  dreItems.push({ 
-    categoria: 'resultadoBruto', 
-    descricao: 'RESULTADO BRUTO', 
-    valor: resultadoBruto, 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
+  }
   
   // Despesas Operacionais
   const despesasOperacionais = resultadosRecords.filter(r => isDespesaOperacional(r.accountCode));
   let totalDespesasOperacionais = despesasOperacionais.reduce((sum, r) => sum + r.finalBalance, 0);
   
-  dreItems.push({ categoria: 'despesasOperacionais', descricao: 'DESPESAS OPERACIONAIS', valor: 0, indentacao: 0 });
-  despesasOperacionais.forEach(r => {
+  if (despesasOperacionais.length > 0) {
+    dreItems.push({ categoria: 'despesasOperacionais', descricao: 'DESPESAS OPERACIONAIS', valor: 0, indentacao: 0 });
+    despesasOperacionais.forEach(r => {
+      dreItems.push({ 
+        categoria: 'despesasOperacionais', 
+        descricao: r.accountDescription, 
+        valor: Math.abs(r.finalBalance), 
+        indentacao: 1 
+      });
+    });
     dreItems.push({ 
       categoria: 'despesasOperacionais', 
-      descricao: r.accountDescription, 
-      valor: Math.abs(r.finalBalance), 
-      indentacao: 1 
-    });
-  });
-  dreItems.push({ 
-    categoria: 'despesasOperacionais', 
-    descricao: 'TOTAL DESPESAS OPERACIONAIS', 
-    valor: Math.abs(totalDespesasOperacionais), 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Resultado Operacional
-  const resultadoOperacional = resultadoBruto - Math.abs(totalDespesasOperacionais);
-  dreItems.push({ 
-    categoria: 'resultadoOperacional', 
-    descricao: 'RESULTADO OPERACIONAL', 
-    valor: resultadoOperacional, 
-    indentacao: 0,
-    isTotalGrupo: true
-  });
-  
-  // Receitas Financeiras
-  const receitasFinanceiras = resultadosRecords.filter(r => isReceitaFinanceira(r.accountCode));
-  let totalReceitasFinanceiras = receitasFinanceiras.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  if (receitasFinanceiras.length > 0) {
-    dreItems.push({ categoria: 'receitasFinanceiras', descricao: 'RECEITAS FINANCEIRAS', valor: 0, indentacao: 0 });
-    receitasFinanceiras.forEach(r => {
-      dreItems.push({ 
-        categoria: 'receitasFinanceiras', 
-        descricao: r.accountDescription, 
-        valor: Math.abs(r.finalBalance), 
-        indentacao: 1 
-      });
-    });
-    dreItems.push({ 
-      categoria: 'receitasFinanceiras', 
-      descricao: 'TOTAL RECEITAS FINANCEIRAS', 
-      valor: Math.abs(totalReceitasFinanceiras), 
+      descricao: 'TOTAL DESPESAS OPERACIONAIS', 
+      valor: Math.abs(totalDespesasOperacionais), 
       indentacao: 0, 
       isTotalGrupo: true 
     });
   }
-  
-  // Despesas Financeiras
-  const despesasFinanceiras = resultadosRecords.filter(r => isDespesaFinanceira(r.accountCode));
-  let totalDespesasFinanceiras = despesasFinanceiras.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  if (despesasFinanceiras.length > 0) {
-    dreItems.push({ categoria: 'despesasFinanceiras', descricao: 'DESPESAS FINANCEIRAS', valor: 0, indentacao: 0 });
-    despesasFinanceiras.forEach(r => {
-      dreItems.push({ 
-        categoria: 'despesasFinanceiras', 
-        descricao: r.accountDescription, 
-        valor: Math.abs(r.finalBalance), 
-        indentacao: 1 
-      });
-    });
-    dreItems.push({ 
-      categoria: 'despesasFinanceiras', 
-      descricao: 'TOTAL DESPESAS FINANCEIRAS', 
-      valor: Math.abs(totalDespesasFinanceiras), 
-      indentacao: 0, 
-      isTotalGrupo: true 
-    });
-  }
-  
-  // Resultado Financeiro
-  const resultadoFinanceiro = Math.abs(totalReceitasFinanceiras) - Math.abs(totalDespesasFinanceiras);
-  if (receitasFinanceiras.length > 0 || despesasFinanceiras.length > 0) {
-    dreItems.push({ 
-      categoria: 'resultadoFinanceiro', 
-      descricao: 'RESULTADO FINANCEIRO', 
-      valor: resultadoFinanceiro, 
-      indentacao: 0,
-      isTotalGrupo: true
-    });
-  }
-  
-  // Resultado antes do IR
-  const resultadoAntesIR = resultadoOperacional + resultadoFinanceiro;
-  dreItems.push({ 
-    categoria: 'resultadoAntesIR', 
-    descricao: 'RESULTADO ANTES DO IR', 
-    valor: resultadoAntesIR, 
-    indentacao: 0,
-    isTotalGrupo: true
-  });
-  
-  // Imposto de Renda
-  const impostosRenda = resultadosRecords.filter(r => isImpostoRenda(r.accountCode));
-  let totalImpostosRenda = impostosRenda.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  if (impostosRenda.length > 0) {
-    dreItems.push({ categoria: 'impostoRenda', descricao: 'IMPOSTO DE RENDA', valor: 0, indentacao: 0 });
-    impostosRenda.forEach(r => {
-      dreItems.push({ 
-        categoria: 'impostoRenda', 
-        descricao: r.accountDescription, 
-        valor: Math.abs(r.finalBalance), 
-        indentacao: 1 
-      });
-    });
-    dreItems.push({ 
-      categoria: 'impostoRenda', 
-      descricao: 'TOTAL IMPOSTO DE RENDA', 
-      valor: Math.abs(totalImpostosRenda), 
-      indentacao: 0, 
-      isTotalGrupo: true 
-    });
-  }
-  
+
   // Resultado líquido
-  const resultadoLiquido = resultadoAntesIR - Math.abs(totalImpostosRenda);
+  const resultadoLiquido = Math.abs(totalReceitasOperacionais) - Math.abs(totalCustosOperacionais) - Math.abs(totalDespesasOperacionais);
   dreItems.push({ 
     categoria: 'resultadoLiquido', 
     descricao: 'RESULTADO LÍQUIDO', 
@@ -220,56 +163,104 @@ export const generateDRE = (records: SpedRecord[]): DREItem[] => {
 };
 
 export const generateBalanco = (records: SpedRecord[]): { ativo: BalancoItem[], passivoPatrimonial: BalancoItem[] } => {
+  // Filtrar registros do Bloco J100 (Balanço Patrimonial)
+  const balancoRecords = records.filter(r => r.block === 'J100');
+
+  if (balancoRecords.length === 0) {
+    console.warn("Nenhum registro J100 encontrado para geração do Balanço");
+    // Fallback para lógica anterior se não houver registros J100
+    return generateBalancoFallback(records);
+  }
+
+  const ativo: BalancoItem[] = [];
+  const passivoPatrimonial: BalancoItem[] = [];
+
+  // Separar por grupos de balanço baseado no código de aglutinação e descrição
+  balancoRecords.forEach(record => {
+    const item: BalancoItem = {
+      categoria: record.accountCode,
+      descricao: record.accountDescription,
+      valor: record.finalBalance,
+      indentacao: 0
+    };
+
+    // Determinar se é Ativo ou Passivo/PL baseado na descrição
+    const descricaoUpper = record.accountDescription.toUpperCase();
+    const isAtivo = descricaoUpper.includes('ATIVO') || 
+                   descricaoUpper.includes('CAIXA') ||
+                   descricaoUpper.includes('BANCO') ||
+                   descricaoUpper.includes('ESTOQUE') ||
+                   descricaoUpper.includes('INVESTIMENTO') ||
+                   (record.finalBalance > 0 && !descricaoUpper.includes('PASSIVO') && !descricaoUpper.includes('CAPITAL'));
+
+    if (isAtivo) {
+      ativo.push(item);
+    } else {
+      passivoPatrimonial.push(item);
+    }
+  });
+
+  // Ordenar por código
+  ativo.sort((a, b) => a.categoria.localeCompare(b.categoria));
+  passivoPatrimonial.sort((a, b) => a.categoria.localeCompare(b.categoria));
+
+  // Calcular totais
+  const totalAtivo = ativo.reduce((sum, item) => sum + item.valor, 0);
+  const totalPassivoPatrimonial = passivoPatrimonial.reduce((sum, item) => sum + item.valor, 0);
+
+  // Adicionar totais
+  ativo.push({
+    categoria: 'total_ativo',
+    descricao: 'TOTAL DO ATIVO',
+    valor: totalAtivo,
+    indentacao: 0,
+    isTotal: true
+  });
+
+  passivoPatrimonial.push({
+    categoria: 'total_passivo_patrimonial',
+    descricao: 'TOTAL DO PASSIVO + PATRIMÔNIO LÍQUIDO',
+    valor: totalPassivoPatrimonial,
+    indentacao: 0,
+    isTotal: true
+  });
+
+  return { ativo, passivoPatrimonial };
+};
+
+// Função de fallback para quando não há registros J100
+const generateBalancoFallback = (records: SpedRecord[]): { ativo: BalancoItem[], passivoPatrimonial: BalancoItem[] } => {
   const ativosRecords = records.filter(record => isAtivo(record.accountCode));
   const passivosRecords = records.filter(record => isPassivo(record.accountCode));
   
   let ativoItems: BalancoItem[] = [];
   let passivoItems: BalancoItem[] = [];
   
-  // Ativo Circulante
-  const ativoCirculante = ativosRecords.filter(r => isAtivoCirculante(r.accountCode));
-  let totalAtivoCirculante = ativoCirculante.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  ativoItems.push({ categoria: 'ativoCirculante', descricao: 'ATIVO CIRCULANTE', valor: 0, indentacao: 0 });
-  ativoCirculante.forEach(r => {
+  // Processar contas do ATIVO
+  ativosRecords.forEach(r => {
     ativoItems.push({ 
-      categoria: 'ativoCirculante', 
+      categoria: r.accountCode, 
       descricao: r.accountDescription, 
       valor: r.finalBalance, 
-      indentacao: 1 
+      indentacao: 0 
     });
   });
-  ativoItems.push({ 
-    categoria: 'ativoCirculante', 
-    descricao: 'TOTAL ATIVO CIRCULANTE', 
-    valor: totalAtivoCirculante, 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Ativo Não Circulante
-  const ativoNaoCirculante = ativosRecords.filter(r => isAtivoNaoCirculante(r.accountCode));
-  let totalAtivoNaoCirculante = ativoNaoCirculante.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  ativoItems.push({ categoria: 'ativoNaoCirculante', descricao: 'ATIVO NÃO CIRCULANTE', valor: 0, indentacao: 0 });
-  ativoNaoCirculante.forEach(r => {
-    ativoItems.push({ 
-      categoria: 'ativoNaoCirculante', 
+
+  // Processar contas do PASSIVO + PATRIMÔNIO LÍQUIDO
+  passivosRecords.forEach(r => {
+    passivoItems.push({ 
+      categoria: r.accountCode, 
       descricao: r.accountDescription, 
       valor: r.finalBalance, 
-      indentacao: 1 
+      indentacao: 0 
     });
   });
-  ativoItems.push({ 
-    categoria: 'ativoNaoCirculante', 
-    descricao: 'TOTAL ATIVO NÃO CIRCULANTE', 
-    valor: totalAtivoNaoCirculante, 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Total do Ativo
-  const totalAtivo = totalAtivoCirculante + totalAtivoNaoCirculante;
+
+  // Calcular totais
+  const totalAtivo = ativosRecords.reduce((sum, r) => sum + r.finalBalance, 0);
+  const totalPassivoPatrimonial = passivosRecords.reduce((sum, r) => sum + r.finalBalance, 0);
+
+  // Adicionar totais
   ativoItems.push({ 
     categoria: 'totalAtivo', 
     descricao: 'TOTAL DO ATIVO', 
@@ -277,76 +268,11 @@ export const generateBalanco = (records: SpedRecord[]): { ativo: BalancoItem[], 
     indentacao: 0, 
     isTotal: true 
   });
-  
-  // Passivo Circulante
-  const passivoCirculante = passivosRecords.filter(r => isPassivoCirculante(r.accountCode));
-  let totalPassivoCirculante = passivoCirculante.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  passivoItems.push({ categoria: 'passivoCirculante', descricao: 'PASSIVO CIRCULANTE', valor: 0, indentacao: 0 });
-  passivoCirculante.forEach(r => {
-    passivoItems.push({ 
-      categoria: 'passivoCirculante', 
-      descricao: r.accountDescription, 
-      valor: r.finalBalance, 
-      indentacao: 1 
-    });
-  });
-  passivoItems.push({ 
-    categoria: 'passivoCirculante', 
-    descricao: 'TOTAL PASSIVO CIRCULANTE', 
-    valor: totalPassivoCirculante, 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Passivo Não Circulante
-  const passivoNaoCirculante = passivosRecords.filter(r => isPassivoNaoCirculante(r.accountCode));
-  let totalPassivoNaoCirculante = passivoNaoCirculante.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  passivoItems.push({ categoria: 'passivoNaoCirculante', descricao: 'PASSIVO NÃO CIRCULANTE', valor: 0, indentacao: 0 });
-  passivoNaoCirculante.forEach(r => {
-    passivoItems.push({ 
-      categoria: 'passivoNaoCirculante', 
-      descricao: r.accountDescription, 
-      valor: r.finalBalance, 
-      indentacao: 1 
-    });
-  });
-  passivoItems.push({ 
-    categoria: 'passivoNaoCirculante', 
-    descricao: 'TOTAL PASSIVO NÃO CIRCULANTE', 
-    valor: totalPassivoNaoCirculante, 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Patrimônio Líquido
-  const patrimonioLiquido = passivosRecords.filter(r => isPatrimonioLiquido(r.accountCode));
-  let totalPatrimonioLiquido = patrimonioLiquido.reduce((sum, r) => sum + r.finalBalance, 0);
-  
-  passivoItems.push({ categoria: 'patrimonioLiquido', descricao: 'PATRIMÔNIO LÍQUIDO', valor: 0, indentacao: 0 });
-  patrimonioLiquido.forEach(r => {
-    passivoItems.push({ 
-      categoria: 'patrimonioLiquido', 
-      descricao: r.accountDescription, 
-      valor: r.finalBalance, 
-      indentacao: 1 
-    });
-  });
-  passivoItems.push({ 
-    categoria: 'patrimonioLiquido', 
-    descricao: 'TOTAL PATRIMÔNIO LÍQUIDO', 
-    valor: totalPatrimonioLiquido, 
-    indentacao: 0, 
-    isTotalGrupo: true 
-  });
-  
-  // Total Passivo e Patrimônio Líquido
-  const totalPassivoPatrimonioLiquido = totalPassivoCirculante + totalPassivoNaoCirculante + totalPatrimonioLiquido;
+
   passivoItems.push({ 
     categoria: 'totalPassivoPatrimonioLiquido', 
     descricao: 'TOTAL PASSIVO E PATRIMÔNIO LÍQUIDO', 
-    valor: totalPassivoPatrimonioLiquido, 
+    valor: totalPassivoPatrimonial, 
     indentacao: 0, 
     isTotal: true 
   });

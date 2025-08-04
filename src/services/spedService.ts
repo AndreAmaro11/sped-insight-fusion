@@ -271,8 +271,8 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
   let contasAmostra = Array.from(chartOfAccounts.entries()).slice(0, 10);
   console.log("Amostra do plano de contas:", contasAmostra);
 
-  // Segunda passada: processar lançamentos
-  const supportedRecordTypes = ['I155', 'C155', 'I150', 'C150', 'I250', 'C250', 'I200', 'C200'];
+  // Segunda passada: processar registros do Bloco J (Demonstrações Contábeis)
+  const supportedRecordTypes = ['J100', 'J150'];
   
   lines.forEach((line, index) => {
     const cleanLine = line.trim().replace('\r', '');
@@ -283,68 +283,90 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     
     const recordType = fields[1];
 
-    if (supportedRecordTypes.includes(recordType)) {
+    // Processar Registro J100 (Balanço Patrimonial)
+    if (recordType === 'J100' && fields.length >= 12) {
       try {
-        let accountCodePos = 3;
-        let amountPos = 5;
-        let indicatorPos = 6;
+        // Campos do J100 conforme Manual ECD:
+        // |J100|COD_AGL|IND_COD_AGL|NIVEL_AGL|COD_AGL_SUP|IND_GRP_BAL|DESCR_COD_AGL|VL_CTA_INI|IND_DC_CTA_INI|VL_CTA_FIN|IND_DC_CTA_FIN|
+        //  [0]   [1]      [2]        [3]       [4]         [5]         [6]           [7]         [8]           [9]         [10]         [11]
         
-        if (fileStructure.version === "ECD") {
-          if (recordType.startsWith('I15') || recordType.startsWith('C15')) {
-            accountCodePos = 3;
-            amountPos = 5;
-            indicatorPos = 6;
-          } else if (recordType.startsWith('I25') || recordType.startsWith('C25')) {
-            accountCodePos = 3;
-            amountPos = 4;
-            indicatorPos = 5;
-          }
-        } else if (fileStructure.version === "ECF") {
-          accountCodePos = 2;
-          amountPos = 3;
-          indicatorPos = 4;
+        const codAgl = fields[2] || '';           // COD_AGL
+        const descricao = fields[7] || '';        // DESCR_COD_AGL  
+        const valorFinal = parseSpedNumber(fields[10] || '0'); // VL_CTA_FIN
+        const indicadorDC = fields[11] || 'D';    // IND_DC_CTA_FIN
+        
+        if (!codAgl || !descricao) return;
+        
+        // Aplicar sinal baseado no indicador D/C
+        let finalBalance = valorFinal;
+        const isCredit = indicadorDC.toUpperCase() === 'C';
+        
+        // Para contas do Ativo (grupo A), débito é positivo
+        // Para contas do Passivo/PL (grupo P), crédito é positivo
+        const grupoBalanco = fields[6] || ''; // IND_GRP_BAL
+        if (grupoBalanco === 'A') {
+          finalBalance = isCredit ? -valorFinal : valorFinal;
+        } else if (grupoBalanco === 'P') {
+          finalBalance = isCredit ? valorFinal : -valorFinal;
         }
         
-        let accountCode = fields[accountCodePos] || fields[2] || '';
-        let amount = parseSpedNumber(fields[amountPos] || fields[4] || fields[3] || '0');
-        let indicator = fields[indicatorPos] || fields[4] || 'D';
+        records.push({
+          accountCode: codAgl,
+          accountDescription: descricao,
+          finalBalance,
+          block: 'J100',
+          fiscalYear
+        });
         
-        if (!accountCode) {
-          if (index < 100) console.log(`Registro sem código de conta: ${cleanLine}`);
-          return;
+        if (records.length <= 10 || records.length % 50 === 0) {
+          console.log(`J100 processado: ${codAgl} - ${descricao}, Valor: ${finalBalance}`);
         }
-
-        accountCode = normalizeAccountCode(accountCode);
         
-        let finalBalance = amount;
-        const isCredit = indicator.toUpperCase() === 'C';
-        
-        const firstDigit = accountCode.charAt(0);
-        if (['2', '3', '4', '5'].includes(firstDigit)) {
-          finalBalance = isCredit ? amount : -amount;
-        } else {
-          finalBalance = isCredit ? -amount : amount;
-        }
-
-        const accountDescription = chartOfAccounts.get(accountCode) || 'Conta não identificada';
-        
-        if (amount !== 0) {
-          records.push({
-            accountCode,
-            accountDescription,
-            finalBalance,
-            block: recordType,
-            fiscalYear
-          });
-          
-          if (records.length <= 5 || records.length % 100 === 0) {
-            console.log(`Lançamento processado: Conta ${accountCode} (${accountDescription}), Valor ${finalBalance}, Tipo ${recordType}`);
-          }
-        }
       } catch (error) {
-        console.error(`Erro ao processar linha ${index + 1}: ${error}`);
-        console.debug(`Linha problemática: ${cleanLine}`);
-        console.debug(`Campos separados: ${JSON.stringify(fields)}`);
+        console.error(`Erro ao processar J100 linha ${index + 1}: ${error}`);
+      }
+    }
+    
+    // Processar Registro J150 (DRE)
+    if (recordType === 'J150' && fields.length >= 13) {
+      try {
+        // Campos do J150 conforme Manual ECD:
+        // |J150|COD_AGL|IND_COD_AGL|NIVEL_AGL|COD_AGL_SUP|IND_GRP_DRE|DESCR_COD_AGL|VL_CTA_INI|IND_DC_CTA_INI|VL_CTA_FIN|IND_DC_CTA_FIN|
+        //  [0]   [1]      [2]        [3]       [4]         [5]         [6]           [7]         [8]           [9]         [10]         [11]
+        
+        const codAgl = fields[2] || '';           // COD_AGL
+        const descricao = fields[7] || '';        // DESCR_COD_AGL
+        const valorFinal = parseSpedNumber(fields[10] || '0'); // VL_CTA_FIN
+        const indicadorDC = fields[11] || 'D';    // IND_DC_CTA_FIN
+        const grupoDRE = fields[6] || '';         // IND_GRP_DRE
+        
+        if (!codAgl || !descricao) return;
+        
+        // Aplicar sinal baseado no indicador D/C e grupo DRE
+        let finalBalance = valorFinal;
+        const isCredit = indicadorDC.toUpperCase() === 'C';
+        
+        // Para DRE: Receitas (R) são crédito (positivo), Despesas (D) são débito (negativo)
+        if (grupoDRE === 'R') {
+          finalBalance = isCredit ? valorFinal : -valorFinal;
+        } else if (grupoDRE === 'D') {
+          finalBalance = isCredit ? -valorFinal : valorFinal;
+        }
+        
+        records.push({
+          accountCode: codAgl,
+          accountDescription: descricao,
+          finalBalance,
+          block: 'J150',
+          fiscalYear
+        });
+        
+        if (records.length <= 10 || records.length % 50 === 0) {
+          console.log(`J150 processado: ${codAgl} - ${descricao}, Valor: ${finalBalance}`);
+        }
+        
+      } catch (error) {
+        console.error(`Erro ao processar J150 linha ${index + 1}: ${error}`);
       }
     }
   });
