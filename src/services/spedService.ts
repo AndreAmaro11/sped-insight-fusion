@@ -225,6 +225,8 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
 
   // Primeira passada: processar cabeçalho e plano de contas
   let contasProcessadas = 0;
+  let cnpj = '';
+  
   lines.forEach((line, index) => {
     const cleanLine = line.trim().replace('\r', '');
     if (!cleanLine) return;
@@ -233,10 +235,21 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     const recordType = fields[1];
 
     if (recordType === '0000' && fields.length >= 6) {
-      const startDate = fields[3] || '';
+      // Campos do registro 0000:
+      // [0]|[1]|[2]|[3]|[4]|[5]|...
+      // |0000|LECD|01012024|31122024|EMPRESA|CNPJ|...
+      const startDate = fields[2] || '';  // Data inicial
+      const endDate = fields[3] || '';    // Data final
+      cnpj = fields[5] || '';              // CNPJ
+      
       fiscalYear = startDate.length >= 4 ? parseInt(startDate.substring(0, 4), 10) : 0;
-      console.log(`Ano fiscal identificado: ${fiscalYear}`);
-      console.log(`Cabeçalho completo: ${cleanLine}`);
+      
+      console.log(`Cabeçalho processado:`);
+      console.log(`- Data inicial: ${startDate}`);
+      console.log(`- Data final: ${endDate}`);
+      console.log(`- CNPJ: ${cnpj}`);
+      console.log(`- Ano fiscal: ${fiscalYear}`);
+      console.log(`- Linha completa: ${cleanLine}`);
     }
 
     if ((recordType === 'C050' || recordType === 'I050' || 
@@ -450,6 +463,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
   // Salvar no banco de dados
   const processedData = { 
     fiscalYear,
+    cnpj,
     records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
   };
   

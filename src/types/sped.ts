@@ -8,6 +8,7 @@ export interface SpedRecord {
 
 export interface SpedProcessedData {
   fiscalYear: number;
+  cnpj?: string;
   records: SpedRecord[];
 }
 
