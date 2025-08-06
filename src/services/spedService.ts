@@ -242,7 +242,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
       const endDate = fields[4] || '';    // Data final
       cnpj = fields[6] || '';              // CNPJ
       
-      fiscalYear = startDate.length >= 4 ? parseInt(startDate.substring(0, 4), 10) : 0;
+      fiscalYear = startDate.length >= 8 ? parseInt(startDate.substring(4, 8), 10) : 0;
       
       console.log(`Cabeçalho processado:`);
       console.log(`- Data inicial: ${startDate}`);
