@@ -234,13 +234,13 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     const fields = cleanLine.split('|');
     const recordType = fields[1];
 
-    if (recordType === '0000' && fields.length >= 6) {
+    if (recordType === '0000' && fields.length >= 7) {
       // Campos do registro 0000:
-      // [0]|[1]|[2]|[3]|[4]|[5]|...
+      // [0]|[1]|[2]|[3]|[4]|[5]|[6]|...
       // |0000|LECD|01012024|31122024|EMPRESA|CNPJ|...
-      const startDate = fields[2] || '';  // Data inicial
-      const endDate = fields[3] || '';    // Data final
-      cnpj = fields[5] || '';              // CNPJ
+      const startDate = fields[3] || '';  // Data inicial
+      const endDate = fields[4] || '';    // Data final
+      cnpj = fields[6] || '';              // CNPJ
       
       fiscalYear = startDate.length >= 4 ? parseInt(startDate.substring(0, 4), 10) : 0;
       
