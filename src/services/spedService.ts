@@ -188,7 +188,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     if (recordType === '0000' && fields.length >= 6) {
       const startDate = fields[3] || '';
       fiscalYear = startDate.length >= 8 ? parseInt(startDate.substring(4), 10) : 0;
-      cnpj = fields[5] || '';
+      cnpj = fields[6] || '';
     }
 
     if ((recordType === 'C050' || recordType === 'I050' || recordType?.startsWith('C05') || recordType?.startsWith('I05')) && fields.length >= 6) {
