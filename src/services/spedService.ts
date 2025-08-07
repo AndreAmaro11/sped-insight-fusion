@@ -189,6 +189,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
       const startDate = fields[3] || '';
       fiscalYear = startDate.length >= 8 ? parseInt(startDate.substring(4), 10) : 0;
       cnpj = fields[6] || '';
+      nomeemp = filds[5] || '';
     }
 
     if ((recordType === 'C050' || recordType === 'I050' || recordType?.startsWith('C05') || recordType?.startsWith('I05')) && fields.length >= 6) {
@@ -251,6 +252,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
   const processedData: SpedProcessedData = {
     fiscalYear,
     cnpj,
+    nomeemp,
     records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
   };
 
