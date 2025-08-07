@@ -30,7 +30,7 @@ const SpedUpload = () => {
           <div className="px-4 py-6 mx-auto max-w-7xl sm:px-6 lg:px-8">
             <h1 className="text-2xl font-bold text-gray-900">Upload de SPED</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Faça upload e visualize os dados do arquivo SPED Contábil
+              Faça upload e visualize os dados inicias do seu arquivo SPED.
             </p>
           </div>
         </div>
@@ -48,7 +48,7 @@ const SpedUpload = () => {
             <TabsContent value="upload">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Upload de Arquivo SPED</CardTitle>
+                  <CardTitle className="text-xl">Upload do Arquivo </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <FileUploader onFileProcessed={handleFileProcessed} />
