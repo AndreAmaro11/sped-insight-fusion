@@ -371,8 +371,8 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
         const indicadorDC = fields[11] || 'D';
         const grupoBalanco = fields[6] || '';
         let finalBalance = indicadorDC.toUpperCase() === 'C' ? valorFinal : -valorFinal;
-        console.log('finalbalance_j100: '+${finalBalance});
-        console.log('valorFinal_j100: '+${valorFinal});
+        console.log('finalbalance_j100: '+ finalBalance);
+        console.log('valorFinal_j100: '+ valorFinal);
         if (grupoBalanco === 'A') finalBalance *= -1;
         records.push({ accountCode: codAgl, accountDescription: descricao, finalBalance, block: 'J100', fiscalYear });
       } catch (error) {
