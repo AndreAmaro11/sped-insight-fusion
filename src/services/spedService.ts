@@ -107,6 +107,35 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
       return;
     }
 
+    // Buscar company_id pelo CNPJ
+    let companyId = null;
+    if (processedData.cnpj) {
+      console.log(`Buscando CNPJ: "${processedData.cnpj}"`);
+      
+      // Normalizar CNPJ removendo pontos, barras e espaços
+      const normalizedCnpj = processedData.cnpj.replace(/[^\d]/g, '');
+      console.log(`CNPJ normalizado: "${normalizedCnpj}"`);
+      
+      const { data: company, error } = await supabase
+        .from('companies')
+        .select('id, cnpj')
+        .or(`cnpj.eq.${processedData.cnpj},cnpj.eq.${normalizedCnpj}`)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Erro ao buscar empresa:', error);
+      }
+      
+      if (company) {
+        companyId = company.id;
+        console.log(`CNPJ ${processedData.cnpj} encontrado na empresa ${companyId}`);
+      } else {
+        console.log(`CNPJ ${processedData.cnpj} não encontrado na tabela de empresas`);
+      }
+    } else {
+      console.log('CNPJ não fornecido');
+    }
+
     const { data: uploadData, error: uploadError } = await supabase
       .from('sped_uploads')
       .insert({
@@ -116,7 +145,8 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
         fiscal_year: processedData.fiscalYear,
         total_records: processedData.records.length,
         processing_status: 'completed',
-        processed_at: new Date().toISOString()
+        processed_at: new Date().toISOString(),
+        company_id: companyId
       })
       .select()
       .single();
@@ -399,11 +429,21 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
     // Buscar company_id pelo CNPJ
     let companyId = null;
     if (processedData.cnpj) {
-      const { data: company } = await supabase
+      console.log(`Buscando CNPJ: "${processedData.cnpj}"`);
+      
+      // Normalizar CNPJ removendo pontos, barras e espaços
+      const normalizedCnpj = processedData.cnpj.replace(/[^\d]/g, '');
+      console.log(`CNPJ normalizado: "${normalizedCnpj}"`);
+      
+      const { data: company, error } = await supabase
         .from('companies')
-        .select('id')
-        .eq('cnpj', processedData.cnpj)
+        .select('id, cnpj')
+        .or(`cnpj.eq.${processedData.cnpj},cnpj.eq.${normalizedCnpj}`)
         .maybeSingle();
+      
+      if (error) {
+        console.error('Erro ao buscar empresa:', error);
+      }
       
       if (company) {
         companyId = company.id;
@@ -411,6 +451,8 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
       } else {
         console.log(`CNPJ ${processedData.cnpj} não encontrado na tabela de empresas`);
       }
+    } else {
+      console.log('CNPJ não fornecido');
     }
 
     // Criar registro de upload
