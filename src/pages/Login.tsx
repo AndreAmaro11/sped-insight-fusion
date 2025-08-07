@@ -82,7 +82,7 @@ const Login = () => {
             Acesse sua conta
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Entre com seu email e senha para acessar o sistema Fulano
+            Entre com seu email e senha para acessar o sistema!
           </p>
         </div>
         
@@ -90,7 +90,7 @@ const Login = () => {
           <CardHeader>
             <CardTitle>SPED Insight Fusion</CardTitle>
             <CardDescription>
-              Sistema de análise de SPED Contábil_Amaro
+              Sistema de análise de SPED Contábil
             </CardDescription>
           </CardHeader>
           
