@@ -82,7 +82,7 @@ const Login = () => {
             Acesse sua conta
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Entre com seu email e senha para acessar o sistema
+            Entre com seu email e senha para acessar o sistema Fulano
           </p>
         </div>
         
