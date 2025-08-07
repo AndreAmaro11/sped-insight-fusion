@@ -57,9 +57,10 @@ const detectFileStructure = (lines: string[]): FileStructure => {
   console.log(`Estrutura detectada - Versão: ${version}, Header: ${headerPos}, Contas: ${accountsPos}`);
   return { version, headerPos, accountsPos };
 };
-  console.log("=== ANÁLISE DE QUALIDADE DOS DADOS2 ===");
+  
 const analyzeDataQuality = (records: SpedRecord[]) => {
   console.log("=== ANÁLISE DE QUALIDADE DOS DADOS ===");
+  console.log("=== ANÁLISE DE QUALIDADE DOS DADOS2 ===");
   const requiredAccounts = ['1', '1.01', '1.02', '2', '2.01', '2.03', '3', '3.01'];
   const missingAccounts = requiredAccounts.filter(acc =>
     !records.some(r => r.accountCode === acc || r.accountCode.startsWith(`${acc}.`))
