@@ -97,7 +97,7 @@ const analyzeDataQuality = (records: SpedRecord[]) => {
 
   console.log(`Grupos contábeis encontrados: ${Array.from(accountPatterns).join(', ')}`);
 };
-
+/*
 const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -181,6 +181,100 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
       account_code: account.code,
       account_name: account.name,
       account_level: account.code.split('.').length
+    }));
+
+    const { error: accountsError } = await supabase.from('chart_of_accounts').insert(accounts);
+    if (accountsError) console.error('Erro ao salvar plano de contas:', accountsError);
+
+    console.log("Dados salvos com sucesso no banco de dados");
+    toast.success("Dados processados e salvos com sucesso!");
+  } catch (error) {
+    console.error('Erro ao salvar no banco:', error);
+    toast.error("Erro ao salvar dados no banco");
+  }
+};
+*/
+
+const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number) => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.warn("Usuário não autenticado - dados não salvos no banco");
+      return;
+    }
+
+    // Buscar company_id pelo CNPJ
+    let companyId: string | null = null;
+
+    if (processedData.cnpj) {
+      const normalizedCnpj = processedData.cnpj.replace(/[^\d]/g, '').trim();
+      console.log(`CNPJ normalizado: "${normalizedCnpj}"`);
+
+      const { data: company, error } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('cnpj', normalizedCnpj)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar empresa:', error);
+      }
+
+      if (company) {
+        companyId = company.id;
+        console.log(`Empresa encontrada com ID: ${companyId}`);
+      } else {
+        console.log(`CNPJ ${normalizedCnpj} não encontrado na tabela de empresas`);
+      }
+    }
+
+    const { data: uploadData, error: uploadError } = await supabase
+      .from('sped_uploads')
+      .insert({
+        user_id: user.id,
+        file_name: fileName,
+        file_size: fileSize,
+        fiscal_year: processedData.fiscalYear,
+        total_records: processedData.records.length,
+        processing_status: 'completed',
+        processed_at: new Date().toISOString(),
+        company_id: companyId ?? null
+      })
+      .select()
+      .single();
+
+    if (uploadError) {
+      console.error('Erro ao criar upload:', uploadError);
+      toast.error("Erro ao salvar dados do upload");
+      return;
+    }
+
+    const spedRecords = processedData.records.map(record => ({
+      upload_id: uploadData.id,
+      account_code: record.accountCode,
+      account_description: record.accountDescription,
+      final_balance: record.finalBalance,
+      block_type: record.block,
+      fiscal_year: record.fiscalYear
+    }));
+
+    const { error: recordsError } = await supabase.from('sped_records').insert(spedRecords);
+    if (recordsError) {
+      console.error('Erro ao salvar registros:', recordsError);
+      toast.error("Erro ao salvar registros SPED");
+      return;
+    }
+
+    const accounts = Array.from(
+      new Map(
+        processedData.records.map(r => [r.accountCode, r.accountDescription])
+      ).entries()
+    ).map(([code, name]) => ({
+      upload_id: uploadData.id,
+      account_code: code,
+      account_name: name,
+      account_level: code.split('.').length
     }));
 
     const { error: accountsError } = await supabase.from('chart_of_accounts').insert(accounts);
