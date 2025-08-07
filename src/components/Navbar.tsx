@@ -20,7 +20,7 @@ const Navbar = () => {
   
   // Navigation items
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard' },
+    { name: 'Início', path: '/inicio' },
     { name: 'Upload SPED', path: '/sped-upload' },
     { name: 'Empresas', path: '/company-registration' },
   ];
