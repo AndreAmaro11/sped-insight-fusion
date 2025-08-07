@@ -186,6 +186,50 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_indicators: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string | null
+          display_order: number | null
+          enabled: boolean | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          enabled?: boolean | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          enabled?: boolean | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_indicators_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_reports: {
         Row: {
           created_at: string

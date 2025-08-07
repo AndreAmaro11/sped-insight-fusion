@@ -22,6 +22,7 @@ const Navbar = () => {
   const navItems = [
     { name: 'Início', path: '/inicio' },
     { name: 'Upload SPED', path: '/sped-upload' },
+    { name: 'Relatórios', path: '/reports' },
     { name: 'Empresas', path: '/company-registration' },
   ];
 
