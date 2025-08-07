@@ -396,6 +396,23 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
       return;
     }
 
+    // Buscar company_id pelo CNPJ
+    let companyId = null;
+    if (processedData.cnpj) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('cnpj', processedData.cnpj)
+        .maybeSingle();
+      
+      if (company) {
+        companyId = company.id;
+        console.log(`CNPJ ${processedData.cnpj} encontrado na empresa ${companyId}`);
+      } else {
+        console.log(`CNPJ ${processedData.cnpj} não encontrado na tabela de empresas`);
+      }
+    }
+
     // Criar registro de upload
     const { data: uploadData, error: uploadError } = await supabase
       .from('sped_uploads')
@@ -406,7 +423,8 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
         fiscal_year: processedData.fiscalYear,
         total_records: processedData.records.length,
         processing_status: 'completed',
-        processed_at: new Date().toISOString()
+        processed_at: new Date().toISOString(),
+        company_id: companyId
       })
       .select()
       .single();
