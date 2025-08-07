@@ -46,6 +46,12 @@ import type { Database } from '@/integrations/supabase/types';
 type Company = Database['public']['Tables']['companies']['Row'];
 type Contract = Database['public']['Tables']['contracts']['Row'];
 
+// Amaro
+function cleanCNPJ(cnpj: string): string {
+  return cnpj.replace(/\D/g, ''); // Remove tudo que não for número
+}
+//
+
 const CompanyRegistration = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -218,7 +224,8 @@ const CompanyRegistration = () => {
       
       const companyData = {
         name: formData.name,
-        cnpj: formData.cnpj,
+        //cnpj: formData.cnpj,
+        cnpj: cleanCNPJ(formData.cnpj), // <-- Aqui normalizamos o CNPJ
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
