@@ -97,8 +97,8 @@ const analyzeDataQuality = (records: SpedRecord[]) => {
 
   console.log(`Grupos contábeis encontrados: ${Array.from(accountPatterns).join(', ')}`);
 };
-saveSpedDataToDatabase 
-/*const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number) => {
+
+const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -156,7 +156,7 @@ saveSpedDataToDatabase
       toast.error("Erro ao salvar dados do upload");
       return;
     }
-*/
+
     const spedRecords = processedData.records.map(record => ({
       upload_id: uploadData.id,
       account_code: record.accountCode,
