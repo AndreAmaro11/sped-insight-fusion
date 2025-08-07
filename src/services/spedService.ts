@@ -326,6 +326,36 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     }
   });
 
+  // Verificar se o CNPJ está cadastrado na tabela companies
+  if (cnpj) {
+    const normalizedCnpj = cnpj.replace(/[^\d]/g, '').trim();
+    console.log(`Verificando se CNPJ "${normalizedCnpj}" está cadastrado...`);
+
+    const { data: company, error } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('cnpj', normalizedCnpj)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Erro ao verificar empresa:', error);
+      toast.error("Erro ao verificar empresa no banco de dados");
+      return { fiscalYear, cnpj, records: [] };
+    }
+
+    if (!company) {
+      console.log(`CNPJ ${normalizedCnpj} não encontrado na tabela de empresas`);
+      toast.error(`A empresa ${cnpj} não está cadastrada no Sistema`);
+      return { fiscalYear, cnpj, records: [] };
+    }
+
+    console.log(`CNPJ ${normalizedCnpj} encontrado - prosseguindo com o processamento`);
+  } else {
+    console.log('CNPJ não encontrado no arquivo SPED');
+    toast.error("CNPJ não encontrado no arquivo SPED");
+    return { fiscalYear, cnpj, records: [] };
+  }
+
   lines.forEach((line, index) => {
     const cleanLine = line.trim().replace('\r', '');
     if (!cleanLine) return;
