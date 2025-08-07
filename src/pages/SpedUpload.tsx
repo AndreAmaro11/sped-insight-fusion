@@ -64,6 +64,7 @@ const SpedUpload = () => {
                       <h2 className="text-xl font-semibold text-gray-800">Dados do SPED</h2>
                       <p className="text-sm text-gray-500">
                         Ano Fiscal: {processedData.fiscalYear} | 
+                        CNPJ: {processedData.CNPJ} |
                         Registros: {processedData.records.length}
                       </p>
                     </div>
