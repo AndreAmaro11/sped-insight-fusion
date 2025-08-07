@@ -461,11 +461,19 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
   analyzeDataQuality(records);
   
   // Salvar no banco de dados
-  const processedData = { 
-    fiscalYear,
-    cnpj,
-    records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
-  };
+//  const processedData = { 
+  //  fiscalYear,
+    //cnpj,
+    //records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
+ // };
+//Alteração Amaro
+const processedData: SpedProcessedData = { 
+  fiscalYear,
+  cnpj,
+  records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
+};
+
+
   
   await saveSpedDataToDatabase(processedData, fileName, fileContent.length);
   
