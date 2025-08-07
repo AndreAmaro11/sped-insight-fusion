@@ -76,16 +76,20 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Acesse sua conta
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Entre com seu email e senha para acessar o sistema!
-          </p>
-        </div>
-        
+      <div className="text-center">
+        <img
+          src="https://media.licdn.com/dms/image/v2/C4D0BAQGCp-lu-Mn_ow/company-logo_100_100/company-logo_100_100/0/1671668887864/lealmetrics_logo?e=1757548800&v=beta&t=9aZGhxi_Sbs3CIXd13JqtQy4HQ3ij2o88OB3tmEoQnE"
+          alt="Logo LealMetrics"
+          className="w-20 h-20 mx-auto mb-4"
+        />
+        <h2 className="mt-2 text-3xl font-bold text-gray-900">
+          Acesse sua conta
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Entre com seu email e senha para acessar o sistema!
+        </p>
+      </div>
+      
         <Card>
           <CardHeader>
             <CardTitle>SPED Insight Fusion</CardTitle>
