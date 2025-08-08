@@ -30,7 +30,7 @@ const SpedUpload = () => {
           <div className="px-4 py-6 mx-auto max-w-7xl sm:px-6 lg:px-8">
             <h1 className="text-2xl font-bold text-gray-900">Upload de SPED</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Faça upload e visualize os dados inicias do seu arquivo SPED.
+              Nesta Pagina você realiza o upload e visualizo os dados inicias do seu arquivo SPED.
             </p>
           </div>
         </div>
