@@ -179,7 +179,7 @@ const Dashboard = () => {
               </Card>
               
               {/* User Profile Action */}
-              <Card className="card-hover cursor-pointer">
+              <Card className="card-hover cursor-pointer" onClick={() => navigate('/Administration')}>
                 <CardHeader className="pb-2">
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
