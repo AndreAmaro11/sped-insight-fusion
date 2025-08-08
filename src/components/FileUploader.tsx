@@ -73,14 +73,15 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileProcessed }) => {
               <p className="text-sm text-gray-500">
                 ou clique para selecionar o arquivo
               </p>
+          
+               <p className="text-xs text-gray-400">
+                Serão aceitos somente sped de Empresas Cadastradas
+              </p>
               
               <p className="text-xs text-gray-400">
                 Somente arquivos .txt são aceitos
               </p>
 
-               <p className="text-xs text-gray-400">
-                Será aceitos somente arquivos de Empresas Cadastradas
-              </p>
             </>
           ) : (
             <>
