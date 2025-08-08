@@ -40,6 +40,7 @@ const Index = () => {
               Economize horas de trabalho e tome decisões mais inteligentes com poucos cliques.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {/* 
               <Button 
                 size="lg" 
                 className="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 text-lg transition-all duration-300 hover:scale-105 shadow-lg"
@@ -55,6 +56,7 @@ const Index = () => {
               >
                 Fale com um Especialista
               </Button>
+              */}
             </div>
           </div>
         </div>
