@@ -1,97 +1,160 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import supabase from '@/lib/supabaseClient';
 
-const DREComparativo = () => {
-  const [dados, setDados] = useState([]);
-  const [carregando, setCarregando] = useState(true);
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download, TrendingUp, TrendingDown } from "lucide-react";
+import { ReportFilters } from '@/types/reports';
 
-  useEffect(() => {
-    const carregarDados = async () => {
-      const { data, error } = await supabase
-        .from('dre_j150')
-        .select('company_name, year, account_description, value')
-        .order('company_name', { ascending: true })
-        .order('account_description', { ascending: true })
-        .order('year', { ascending: true });
+interface DREIndicatorProps {
+  filters: ReportFilters;
+}
 
-      if (error) {
-        console.error('Erro ao buscar dados:', error);
-      } else {
-        setDados(data);
-      }
-      setCarregando(false);
-    };
-
-    carregarDados();
-  }, []);
-
-  const agruparDados = () => {
-    const agrupado = {};
-    const anosSet = new Set();
-
-    dados.forEach((linha) => {
-      const { company_name, account_description, year, value } = linha;
-      anosSet.add(year);
-      const chave = `${company_name}__${account_description}`;
-      if (!agrupado[chave]) {
-        agrupado[chave] = {
-          company_name,
-          account_description,
-          valores: {}
-        };
-      }
-      agrupado[chave].valores[year] = value;
-    });
-
-    const anos = Array.from(anosSet).sort();
-    return { linhas: Object.values(agrupado), anos };
+const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
+  const handleExport = () => {
+    // TODO: Implementar exportação
+    console.log('Exportando DRE com filtros:', filters);
   };
 
-  if (carregando) {
-    return <Skeleton className="h-48 w-full" />;
-  }
-
-  const { linhas, anos } = agruparDados();
+  // Mock data - será substituído por dados reais
+  const mockData = {
+    receita: 1500000,
+    custos: 900000,
+    lucroOperacional: 450000,
+    lucroLiquido: 375000,
+    margemLiquida: 25.0,
+    crescimentoReceita: 12.5
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>DRE Comparativo por Conta</CardTitle>
-      </CardHeader>
-      <CardContent className="overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Conta</TableHead>
-              {anos.map((ano) => (
-                <TableHead key={ano} className="text-right">{ano}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {linhas.map((linha, idx) => (
-              <TableRow key={idx}>
-                <TableCell>{linha.company_name}</TableCell>
-                <TableCell>{linha.account_description}</TableCell>
-                {anos.map((ano) => (
-                  <TableCell key={ano} className="text-right">
-                    {linha.valores[ano]?.toLocaleString('pt-BR', {
+    <div className="space-y-6">
+      {/* KPIs Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Receita Total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 0
+              }).format(mockData.receita)}
+            </div>
+            <div className="flex items-center text-sm text-green-600">
+              <TrendingUp className="h-4 w-4 mr-1" />
+              +{mockData.crescimentoReceita}% vs período anterior
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro Operacional</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 0
+              }).format(mockData.lucroOperacional)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro Líquido</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 0
+              }).format(mockData.lucroLiquido)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Margem Líquida</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{mockData.margemLiquida}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* DRE Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Demonstração do Resultado do Exercício</CardTitle>
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2">Conta</th>
+                  <th className="text-right py-2">Valor</th>
+                  <th className="text-right py-2">% Receita</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 font-medium">Receita Bruta</td>
+                  <td className="text-right py-2">
+                    {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL'
-                    }) || '-'}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                    }).format(mockData.receita)}
+                  </td>
+                  <td className="text-right py-2">100,0%</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 pl-4">(-) Custos dos Produtos Vendidos</td>
+                  <td className="text-right py-2 text-red-600">
+                    ({new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(mockData.custos)})
+                  </td>
+                  <td className="text-right py-2">60,0%</td>
+                </tr>
+                <tr className="border-b font-medium">
+                  <td className="py-2">Lucro Operacional</td>
+                  <td className="text-right py-2">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(mockData.lucroOperacional)}
+                  </td>
+                  <td className="text-right py-2">30,0%</td>
+                </tr>
+                <tr className="border-b font-bold">
+                  <td className="py-2">Lucro Líquido</td>
+                  <td className="text-right py-2 text-green-600">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL'
+                    }).format(mockData.lucroLiquido)}
+                  </td>
+                  <td className="text-right py-2">{mockData.margemLiquida}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
-export default DREComparativo;
+export default DREIndicator;
