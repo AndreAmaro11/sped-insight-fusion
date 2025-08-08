@@ -24,7 +24,7 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate('/inicio');
     }
   }, [user, navigate]);
 
@@ -45,7 +45,7 @@ const Login = () => {
         console.error("Login error:", error);
       } else {
         toast.success("Login realizado com sucesso!");
-        navigate('/dashboard');
+        navigate('/inicio');
       }
     } catch (error) {
       toast.error("Erro inesperado. Tente novamente.");
