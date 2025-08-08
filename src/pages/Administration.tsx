@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { isAuthenticated, hasRole } from '@/utils/authUtils';
+import IndicatorManagement from '@/components/IndicatorManagement';
 
 interface User {
   id: number;
@@ -165,6 +166,7 @@ const Administration = () => {
             <TabsList className="mb-6">
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="activity">Atividade do Sistema</TabsTrigger>
+              <TabsTrigger value="indicators">Indicadores</TabsTrigger>
             </TabsList>
             
             <TabsContent value="users">
@@ -285,6 +287,10 @@ const Administration = () => {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="indicators">
+              <IndicatorManagement />
             </TabsContent>
           </Tabs>
         </div>
