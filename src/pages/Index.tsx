@@ -19,7 +19,7 @@ const Index = () => {
               <line x1="3" y1="9" x2="21" y2="9"/>
               <line x1="3" y1="15" x2="21" y2="15"/>
             </svg>
-            <h1 className="text-xl font-bold">SPED Insight Fusion</h1>
+            <h1 className="text-xl font-bold">SPED Insight Fusion - Alexandre</h1>
           </div>
           
           <div className="flex items-center space-x-4">
