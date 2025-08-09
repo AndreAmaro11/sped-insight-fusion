@@ -57,7 +57,7 @@ const ReportFiltersComponent: React.FC<ReportFiltersProps> = ({ filters, onFilte
   };
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - i).reverse();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i).reverse();
 
   return (
     <Card className="mb-6">
