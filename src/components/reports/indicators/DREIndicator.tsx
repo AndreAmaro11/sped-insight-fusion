@@ -38,8 +38,14 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
         .order('fiscal_year', { ascending: true })
         .order('account_code', { ascending: true });
 
-      if (filters.fiscalYear) {
-        query = query.eq('fiscal_year', filters.fiscalYear);
+      if (filters.fiscalYearStart && filters.fiscalYearEnd) {
+        query = query
+          .gte('fiscal_year', filters.fiscalYearStart)
+          .lte('fiscal_year', filters.fiscalYearEnd);
+      } else if (filters.fiscalYearStart) {
+        query = query.gte('fiscal_year', filters.fiscalYearStart);
+      } else if (filters.fiscalYearEnd) {
+        query = query.lte('fiscal_year', filters.fiscalYearEnd);
       }
 
       const { data, error } = await query;
@@ -89,7 +95,8 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `dre_j150${filters.fiscalYear ? '_' + filters.fiscalYear : ''}.csv`;
+    a.download = `dre_j150${filters.fiscalYearStart || filters.fiscalYearEnd ? 
+      `_${filters.fiscalYearStart || 'inicio'}-${filters.fiscalYearEnd || 'fim'}` : ''}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

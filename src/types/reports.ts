@@ -11,7 +11,8 @@ export interface FinancialIndicator {
 }
 
 export interface ReportFilters {
-  fiscalYear?: number;
+  fiscalYearStart?: number;
+  fiscalYearEnd?: number;
   companyId?: string;
   groupId?: string;
   branchId?: string;

@@ -35,7 +35,11 @@ const DefaultIndicator: React.FC<DefaultIndicatorProps> = ({
             Filtros aplicados: {Object.keys(filters).length > 0 ? 
               Object.entries(filters)
                 .filter(([_, value]) => value)
-                .map(([key, value]) => `${key}: ${value}`)
+                  .map(([key, value]) => {
+                    if (key === 'fiscalYearStart') return `Ano inicial: ${value}`;
+                    if (key === 'fiscalYearEnd') return `Ano final: ${value}`;
+                    return `${key}: ${value}`;
+                  })
                 .join(', ') 
               : 'Nenhum filtro aplicado'
             }

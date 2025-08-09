@@ -40,8 +40,14 @@ const BalancoIndicator: React.FC<BalancoIndicatorProps> = ({ filters }) => {
 
       // Se tem filtro de ano específico, usa apenas esse ano
       // Senão, busca todos os anos disponíveis
-      if (filters.fiscalYear) {
-        query = query.eq('fiscal_year', filters.fiscalYear);
+      if (filters.fiscalYearStart && filters.fiscalYearEnd) {
+        query = query
+          .gte('fiscal_year', filters.fiscalYearStart)
+          .lte('fiscal_year', filters.fiscalYearEnd);
+      } else if (filters.fiscalYearStart) {
+        query = query.gte('fiscal_year', filters.fiscalYearStart);
+      } else if (filters.fiscalYearEnd) {
+        query = query.lte('fiscal_year', filters.fiscalYearEnd);
       }
 
       const { data, error } = await query;

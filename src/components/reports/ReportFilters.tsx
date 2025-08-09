@@ -67,15 +67,34 @@ const ReportFiltersComponent: React.FC<ReportFiltersProps> = ({ filters, onFilte
           <h3 className="text-lg font-semibold">Filtros Globais</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="fiscalYear">Ano Fiscal</Label>
+            <Label htmlFor="fiscalYearStart">Ano Inicial</Label>
             <Select 
-              value={filters.fiscalYear?.toString() || ""} 
-              onValueChange={(value) => handleFilterChange('fiscalYear', value ? parseInt(value) : undefined)}
+              value={filters.fiscalYearStart?.toString() || ""} 
+              onValueChange={(value) => handleFilterChange('fiscalYearStart', value ? parseInt(value) : undefined)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o ano" />
+                <SelectValue placeholder="Ano inicial" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map(year => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fiscalYearEnd">Ano Final</Label>
+            <Select 
+              value={filters.fiscalYearEnd?.toString() || ""} 
+              onValueChange={(value) => handleFilterChange('fiscalYearEnd', value ? parseInt(value) : undefined)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Ano final" />
               </SelectTrigger>
               <SelectContent>
                 {years.map(year => (
