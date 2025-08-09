@@ -42,30 +42,6 @@ const mockUsers: User[] = [
     role: 'admin',
     status: 'active',
     lastLogin: '2025-04-28 09:15:23'
-  },
-  {
-    id: 2,
-    name: 'Usuário Padrão',
-    email: 'user@example.com',
-    role: 'user',
-    status: 'active',
-    lastLogin: '2025-04-27 14:32:10'
-  },
-  {
-    id: 3,
-    name: 'João Silva',
-    email: 'joao@example.com',
-    role: 'user',
-    status: 'active',
-    lastLogin: '2025-04-26 10:45:33'
-  },
-  {
-    id: 4,
-    name: 'Maria Souza',
-    email: 'maria@example.com',
-    role: 'user',
-    status: 'inactive',
-    lastLogin: '2025-04-20 17:22:45'
   }
 ];
 
@@ -85,27 +61,6 @@ const mockActivity: SystemActivity[] = [
     action: 'Login',
     timestamp: '2025-04-28 09:15:23',
     details: 'Login bem-sucedido'
-  },
-  {
-    id: 2,
-    user: 'user@example.com',
-    action: 'Upload SPED',
-    timestamp: '2025-04-27 14:32:10',
-    details: 'Arquivo SPED_EMPRESA_ABC_2023.txt processado com sucesso'
-  },
-  {
-    id: 3,
-    user: 'joao@example.com',
-    action: 'Nova Empresa',
-    timestamp: '2025-04-26 10:45:33',
-    details: 'Empresa "XYZ Comércio S.A." cadastrada'
-  },
-  {
-    id: 4,
-    user: 'admin@example.com',
-    action: 'Gerenciamento de Usuários',
-    timestamp: '2025-04-25 16:20:11',
-    details: 'Usuário "Maria Souza" adicionado'
   }
 ];
 
