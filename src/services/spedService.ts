@@ -2,6 +2,7 @@
 import { SpedProcessedData, SpedRecord, FileStructure } from '@/types/sped';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/services/auditService";
 
 const normalizeAccountCode = (code: string): string => {
   return code
@@ -183,6 +184,18 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
 
     const { error: accountsError } = await supabase.from('chart_of_accounts').insert(accounts);
     if (accountsError) console.error('Erro ao salvar plano de contas:', accountsError);
+
+    await logAudit('Upload SPED', {
+      entityType: 'sped_upload',
+      entityId: uploadData.id,
+      details: {
+        fileName,
+        fileSize,
+        fiscalYear: processedData.fiscalYear,
+        totalRecords: processedData.records.length,
+        companyId
+      }
+    });
 
     console.log("Dados salvos com sucesso no banco de dados");
     toast.success("Dados processados e salvos com sucesso!");

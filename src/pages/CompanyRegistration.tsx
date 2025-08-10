@@ -42,6 +42,7 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { logAudit } from '@/services/auditService';
 
 type Company = Database['public']['Tables']['companies']['Row'];
 type Contract = Database['public']['Tables']['contracts']['Row'];
@@ -284,6 +285,12 @@ const CompanyRegistration = () => {
 
         setCompanies([data, ...companies]);
         toast.success("Empresa cadastrada com sucesso!");
+
+        await logAudit('Cadastro CNPJ', {
+          entityType: 'company',
+          entityId: data.id,
+          details: { cnpj: data.cnpj, name: data.name }
+        });
       }
       
       resetForm();

@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import Navbar from '@/components/Navbar';
 import { isAuthenticated, hasRole } from '@/utils/authUtils';
 import IndicatorManagement from '@/components/IndicatorManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 interface User {
   id: number;
@@ -54,32 +55,55 @@ interface SystemActivity {
 }
 
 // Mock data for system activity
-const mockActivity: SystemActivity[] = [
-  {
-    id: 1,
-    user: 'admin@example.com',
-    action: 'Login',
-    timestamp: '2025-04-28 09:15:23',
-    details: 'Login bem-sucedido'
-  }
-];
+const mockActivity: SystemActivity[] = [];
 
 const Administration = () => {
   const navigate = useNavigate();
   const [users, setUsers] = React.useState<User[]>(mockUsers);
   const [activities, setActivities] = React.useState<SystemActivity[]>(mockActivity);
   
-  useEffect(() => {
-    // Check if user is authenticated and has admin role
-    if (!isAuthenticated()) {
-      navigate('/login');
-      return;
-    }
-    
-    if (!hasRole('admin')) {
-      toast.error("Você não tem permissão para acessar esta página");
-      navigate('/dashboard');
-    }
+useEffect(() => {
+    const run = async () => {
+      // Check if user is authenticated and has admin role
+      if (!isAuthenticated()) {
+        navigate('/login');
+        return;
+      }
+      
+      if (!hasRole('admin')) {
+        toast.error("Você não tem permissão para acessar esta página");
+        navigate('/dashboard');
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data, error } = await supabase
+          .from('audit_logs')
+          .select('id, created_at, action, details')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (error) {
+          console.error('Erro ao buscar atividades:', error);
+          toast.error('Erro ao carregar atividades');
+          return;
+        }
+        const email = user?.email ?? '';
+        const mapped = (data ?? []).map((row: any, idx: number) => ({
+          id: idx + 1,
+          user: email,
+          action: row.action as string,
+          timestamp: new Date(row.created_at as string).toLocaleString('pt-BR'),
+          details: typeof row.details === 'string' ? row.details : JSON.stringify(row.details ?? ''),
+        }));
+        setActivities(mapped);
+      } catch (e) {
+        console.error('Erro ao carregar atividades:', e);
+        toast.error('Erro ao carregar atividades');
+      }
+    };
+
+    run();
   }, [navigate]);
 
   const handleToggleUserStatus = (userId: number) => {
