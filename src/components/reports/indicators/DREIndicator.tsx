@@ -74,7 +74,7 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
       setYears(yrs);
       setItems(map);
     } catch (e) {
-      console.error('Erro ao buscar DRE (J150):', e);
+      console.error('Erro ao buscar DRE:', e);
       setError('Erro ao carregar dados do DRE');
     } finally {
       setLoading(false);
@@ -169,7 +169,7 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
       {/* DRE Table (J150) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Demonstração do Resultado do Exercício (J150)</CardTitle>
+          <CardTitle>Demonstração do Resultado do Exercício</CardTitle>
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Exportar
@@ -203,7 +203,7 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              Nenhum dado de DRE (J150) encontrado para os filtros selecionados
+              Nenhum dado de DRE encontrado para os filtros selecionados
             </div>
           )}
         </CardContent>
