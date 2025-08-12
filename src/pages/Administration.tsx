@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface User {
   id: number;
+  profileId?: string;
   name: string;
   email: string;
   role: string;
@@ -34,17 +35,6 @@ interface User {
   lastLogin: string;
 }
 
-// Mock data for users
-const mockUsers: User[] = [
-  {
-    id: 1,
-    name: 'Administrador',
-    email: 'admin@example.com',
-    role: 'admin',
-    status: 'active',
-    lastLogin: '2025-04-28 09:15:23'
-  }
-];
 
 interface SystemActivity {
   id: number;
@@ -59,7 +49,7 @@ const mockActivity: SystemActivity[] = [];
 
 const Administration = () => {
   const navigate = useNavigate();
-  const [users, setUsers] = React.useState<User[]>(mockUsers);
+  const [users, setUsers] = React.useState<User[]>([]);
   const [activities, setActivities] = React.useState<SystemActivity[]>(mockActivity);
   
 useEffect(() => {
@@ -97,6 +87,28 @@ useEffect(() => {
           details: typeof row.details === 'string' ? row.details : JSON.stringify(row.details ?? ''),
         }));
         setActivities(mapped);
+
+        // Buscar usuários (profiles) do Supabase
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, role, is_active, updated_at')
+          .order('full_name', { ascending: true });
+
+        if (profilesError) {
+          console.error('Erro ao buscar usuários:', profilesError);
+          toast.error('Erro ao carregar usuários');
+        } else {
+          const mappedUsers: User[] = (profiles ?? []).map((p: any, idx: number) => ({
+            id: idx + 1,
+            profileId: p.id,
+            name: p.full_name || p.email || 'Usuário',
+            email: p.email || '',
+            role: p.role || 'user',
+            status: p.is_active ? 'active' : 'inactive',
+            lastLogin: '-',
+          }));
+          setUsers(mappedUsers);
+        }
       } catch (e) {
         console.error('Erro ao carregar atividades:', e);
         toast.error('Erro ao carregar atividades');
