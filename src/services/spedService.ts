@@ -296,7 +296,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
         console.error(`Erro ao processar J100 linha ${index + 1}: ${error}`);
       }
     }
-
+//DRE C650
     if (recordType === 'J150' && fields.length >= 13) {
       try {
         const codAgl = fields[2] || '';
