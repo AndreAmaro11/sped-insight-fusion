@@ -308,11 +308,13 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
         // Usar o nível como código da conta
         const codAgl = nivel;
         const valorFinal = parseSpedNumber(valorStr);
-        let finalBalance = valorFinal;
-        const isCredit = indicadorDC.toUpperCase() === 'C';
-        
-        // Para C650, crédito é positivo, débito é negativo (padrão DRE)
-        finalBalance = isCredit ? valorFinal : -valorFinal;
+        // Para C650: D (débito) = negativo, C (crédito) = positivo
+        let finalBalance;
+        if (indicadorDC.toUpperCase() === 'D') {
+          finalBalance = -valorFinal; // Débito = negativo
+        } else {
+          finalBalance = valorFinal;  // Crédito = positivo
+        }
         
         console.log(`C650 processado - Nível: ${nivel}, Descrição: ${descricao}, Valor: ${valorStr}, DC: ${indicadorDC}, Final: ${finalBalance}`);
         records.push({ accountCode: codAgl, accountDescription: descricao, finalBalance, block: 'C650', fiscalYear });
