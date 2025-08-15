@@ -308,6 +308,7 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
         const isCredit = indicadorDC.toUpperCase() === 'C';
         // Para C650, tratamento similar ao J150 mas específico para DRE
         finalBalance = isCredit ? valorFinal : -valorFinal;
+        console.log(`C650 processado - Código: ${codAgl}, Descrição: ${descricao}, Valor: ${finalBalance}`);
         records.push({ accountCode: codAgl, accountDescription: descricao, finalBalance, block: 'C650', fiscalYear });
       } catch (error) {
         console.error(`Erro ao processar C650 linha ${index + 1}: ${error}`);
