@@ -298,17 +298,23 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     }
 
     // DRE C650
-    if (recordType === 'C650' && fields.length >= 8) {
+    if (recordType === 'C650' && fields.length >= 7) {
       try {
-        const codAgl = fields[2] || '';
-        const descricao = fields[3] || '';
-        const valorFinal = parseSpedNumber(fields[4] || '0');
-        const indicadorDC = fields[5] || 'D';
+        const nivel = fields[3] || '';
+        const descricao = fields[4] || '';
+        const valorStr = fields[5] || '0';
+        const indicadorDC = fields[6] || 'D';
+        
+        // Usar o nível como código da conta
+        const codAgl = nivel;
+        const valorFinal = parseSpedNumber(valorStr);
         let finalBalance = valorFinal;
         const isCredit = indicadorDC.toUpperCase() === 'C';
-        // Para C650, tratamento similar ao J150 mas específico para DRE
+        
+        // Para C650, crédito é positivo, débito é negativo (padrão DRE)
         finalBalance = isCredit ? valorFinal : -valorFinal;
-        console.log(`C650 processado - Código: ${codAgl}, Descrição: ${descricao}, Valor: ${finalBalance}`);
+        
+        console.log(`C650 processado - Nível: ${nivel}, Descrição: ${descricao}, Valor: ${valorStr}, DC: ${indicadorDC}, Final: ${finalBalance}`);
         records.push({ accountCode: codAgl, accountDescription: descricao, finalBalance, block: 'C650', fiscalYear });
       } catch (error) {
         console.error(`Erro ao processar C650 linha ${index + 1}: ${error}`);
