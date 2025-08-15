@@ -28,13 +28,18 @@ const isPassivoNaoCirculante = (code: string) => code.startsWith('2.02') || code
 const isPatrimonioLiquido = (code: string) => code.startsWith('2.03') || code.startsWith('2.3');
 
 export const generateDRE = (records: SpedRecord[]): DREItem[] => {
-  // Filtrar registros do Bloco J150 (DRE)
-  const dreRecords = records.filter(r => r.block === 'J150');
+  // Priorizar registros do Bloco C650 (DRE), com fallback para J150
+  let dreRecords = records.filter(r => r.block === 'C650');
   
   if (dreRecords.length === 0) {
-    console.warn("Nenhum registro J150 encontrado para geração da DRE");
-    // Fallback para lógica anterior se não houver registros J150
-    return generateDREFallback(records);
+    console.warn("Nenhum registro C650 encontrado, tentando J150");
+    dreRecords = records.filter(r => r.block === 'J150');
+    
+    if (dreRecords.length === 0) {
+      console.warn("Nenhum registro C650 ou J150 encontrado para geração da DRE");
+      // Fallback para lógica anterior se não houver registros C650 ou J150
+      return generateDREFallback(records);
+    }
   }
 
   let dreItems: DREItem[] = [];
