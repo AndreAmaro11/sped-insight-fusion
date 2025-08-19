@@ -1,4 +1,5 @@
 import { SpedRecord, DREItem, BalancoItem, ReportData } from '@/types/sped';
+import { supabase } from '@/integrations/supabase/client';
 
 // Account classification functions
 const isReceitaOperacional = (code: string) => 
@@ -28,16 +29,16 @@ const isPassivoNaoCirculante = (code: string) => code.startsWith('2.02') || code
 const isPatrimonioLiquido = (code: string) => code.startsWith('2.03') || code.startsWith('2.3');
 
 export const generateDRE = (records: SpedRecord[]): DREItem[] => {
-  // Priorizar registros do Bloco C650 (DRE), com fallback para J150
-  let dreRecords = records.filter(r => r.block === 'C650');
+  // Priorizar registros do Bloco J150 (DRE), com fallback para C650
+  let dreRecords = records.filter(r => r.block === 'J150');
   
   if (dreRecords.length === 0) {
-    console.warn("Nenhum registro C650 encontrado, tentando J150");
-    dreRecords = records.filter(r => r.block === 'J150');
+    console.warn("Nenhum registro J150 encontrado, tentando C650");
+    dreRecords = records.filter(r => r.block === 'C650');
     
     if (dreRecords.length === 0) {
-      console.warn("Nenhum registro C650 ou J150 encontrado para geração da DRE");
-      // Fallback para lógica anterior se não houver registros C650 ou J150
+      console.warn("Nenhum registro J150 ou C650 encontrado para geração da DRE");
+      // Fallback para lógica anterior se não houver registros J150 ou C650
       return generateDREFallback(records);
     }
   }
@@ -56,6 +57,91 @@ export const generateDRE = (records: SpedRecord[]): DREItem[] => {
 
   // Ordenar por código de aglutinação
   dreItems.sort((a, b) => a.categoria.localeCompare(b.categoria));
+
+  // Calcular resultado líquido (último item da DRE)
+  const totalReceitas = dreItems
+    .filter(item => item.valor > 0)
+    .reduce((sum, item) => sum + item.valor, 0);
+    
+  const totalDespesas = dreItems
+    .filter(item => item.valor < 0)
+    .reduce((sum, item) => sum + Math.abs(item.valor), 0);
+    
+  const resultadoLiquido = totalReceitas - totalDespesas;
+  
+  dreItems.push({
+    categoria: 'resultado_liquido',
+    descricao: 'RESULTADO LÍQUIDO',
+    valor: resultadoLiquido,
+    indentacao: 0,
+    isTotal: true
+  });
+
+  return dreItems;
+};
+
+// Função para gerar DRE com ordenação usando campo "ordem" do banco
+export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: string): Promise<DREItem[]> => {
+  // Priorizar registros do Bloco J150 (DRE)
+  let dreRecords = records.filter(r => r.block === 'J150');
+  
+  if (dreRecords.length === 0) {
+    console.warn("Nenhum registro J150 encontrado, usando ordenação padrão");
+    return generateDRE(records);
+  }
+
+  // Buscar ordens do banco de dados se uploadId estiver disponível
+  let ordenMap = new Map<string, number>();
+  if (uploadId) {
+    try {
+      const { data: chartData, error } = await supabase
+        .from('chart_of_accounts')
+        .select('account_code, ordem')
+        .eq('upload_id', uploadId)
+        .not('ordem', 'is', null);
+
+      if (error) {
+        console.error('Erro ao buscar ordens:', error);
+      } else if (chartData) {
+        chartData.forEach(item => {
+          if (item.ordem !== null) {
+            ordenMap.set(item.account_code, item.ordem);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erro na consulta de ordens:', error);
+    }
+  }
+
+  let dreItems: DREItem[] = [];
+  
+  // Adicionar todos os itens do J150
+  dreRecords.forEach(record => {
+    dreItems.push({
+      categoria: record.accountCode,
+      descricao: record.accountDescription,
+      valor: record.finalBalance,
+      indentacao: 0
+    });
+  });
+
+  // Ordenar usando a coluna "ordem" quando disponível, senão por código
+  dreItems.sort((a, b) => {
+    const ordemA = ordenMap.get(a.categoria);
+    const ordemB = ordenMap.get(b.categoria);
+    
+    if (ordemA !== undefined && ordemB !== undefined) {
+      return ordemA - ordemB;
+    }
+    if (ordemA !== undefined && ordemB === undefined) {
+      return -1;
+    }
+    if (ordemA === undefined && ordemB !== undefined) {
+      return 1;
+    }
+    return a.categoria.localeCompare(b.categoria);
+  });
 
   // Calcular resultado líquido (último item da DRE)
   const totalReceitas = dreItems
@@ -290,6 +376,17 @@ const generateBalancoFallback = (records: SpedRecord[]): { ativo: BalancoItem[],
 
 export const generateReports = (records: SpedRecord[], fiscalYear: number): ReportData => {
   const dre = generateDRE(records);
+  const balanco = generateBalanco(records);
+  
+  return {
+    dre,
+    balanco,
+    fiscalYear
+  };
+};
+
+export const generateReportsWithOrder = async (records: SpedRecord[], fiscalYear: number, uploadId?: string): Promise<ReportData> => {
+  const dre = await generateDREWithOrder(records, uploadId);
   const balanco = generateBalanco(records);
   
   return {

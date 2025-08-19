@@ -100,13 +100,13 @@ const analyzeDataQuality = (records: SpedRecord[]) => {
   console.log(`Grupos contábeis encontrados: ${Array.from(accountPatterns).join(', ')}`);
 };
 
-const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number) => {
+const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName: string, fileSize: number, chartOfAccounts: Map<string, string>): Promise<{ uploadId: string } | null> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       console.warn("Usuário não autenticado - dados não salvos no banco");
-      return;
+      return null;
     }
 
     // Buscar company_id pelo CNPJ
@@ -152,7 +152,7 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
     if (uploadError) {
       console.error('Erro ao criar upload:', uploadError);
       toast.error("Erro ao salvar dados do upload");
-      return;
+      return null;
     }
 
     const spedRecords = processedData.records.map(record => ({
@@ -168,19 +168,33 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
     if (recordsError) {
       console.error('Erro ao salvar registros:', recordsError);
       toast.error("Erro ao salvar registros SPED");
-      return;
+      return null;
     }
 
     const accounts = Array.from(
       new Map(
         processedData.records.map(r => [r.accountCode, r.accountDescription])
       ).entries()
-    ).map(([code, name]) => ({
-      upload_id: uploadData.id,
-      account_code: code,
-      account_name: name,
-      account_level: code.split('.').length
-    }));
+    ).map(([code, name]) => {
+      // Verificar se tem ordem do chartOfAccounts
+      const accountInfo = chartOfAccounts.get(code);
+      let ordem = null;
+      let accountName = name;
+      
+      if (accountInfo && accountInfo.includes('|')) {
+        const parts = accountInfo.split('|');
+        accountName = parts[0];
+        ordem = parseInt(parts[1]) || null;
+      }
+      
+      return {
+        upload_id: uploadData.id,
+        account_code: code,
+        account_name: accountName,
+        account_level: code.split('.').length,
+        ordem: ordem
+      };
+    });
 
     const { error: accountsError } = await supabase.from('chart_of_accounts').insert(accounts);
     if (accountsError) console.error('Erro ao salvar plano de contas:', accountsError);
@@ -199,9 +213,12 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
 
     console.log("Dados salvos com sucesso no banco de dados");
     toast.success("Dados processados e salvos com sucesso!");
+    
+    return { uploadId: uploadData.id };
   } catch (error) {
     console.error('Erro ao salvar no banco:', error);
     toast.error("Erro ao salvar dados no banco");
+    return null;
   }
 };
 
@@ -238,6 +255,17 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
       if (accountCode) {
         const normalizedCode = normalizeAccountCode(accountCode);
         chartOfAccounts.set(normalizedCode, accountName);
+      }
+    }
+
+    // Capturar plano de contas do J150 com ordem
+    if (recordType === 'J150' && fields.length >= 8) {
+      const ordem = fields[2] || '';
+      const accountCode = fields[3] || '';
+      let accountName = fields[7] || '';
+      if (accountCode && ordem) {
+        const normalizedCode = normalizeAccountCode(accountCode);
+        chartOfAccounts.set(normalizedCode, `${accountName}|${ordem}`);
       }
     }
   });
@@ -357,7 +385,9 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     records: records.sort((a, b) => a.accountCode.localeCompare(b.accountCode))
   };
 
-  await saveSpedDataToDatabase(processedData, fileName, fileContent.length);
+  const uploadDataResult = await saveSpedDataToDatabase(processedData, fileName, fileContent.length, chartOfAccounts);
+  processedData.uploadId = uploadDataResult?.uploadId;
+  
   return processedData;
 };
 

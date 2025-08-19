@@ -10,6 +10,7 @@ export interface SpedProcessedData {
   fiscalYear: number;
   cnpj?: string;
   records: SpedRecord[];
+  uploadId?: string;
 }
 
 export interface DREItem {
