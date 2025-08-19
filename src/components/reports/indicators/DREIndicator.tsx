@@ -88,11 +88,33 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
           console.log("Chart data encontrada:", chartData?.length || 0);
           chartData?.forEach(item => {
             if (item.ordem !== null) {
+              // Mapear tanto o código original quanto possíveis normalizações
               ordenMap.set(`${item.upload_id}-${item.account_code}`, item.ordem);
               console.log(`Mapeado: ${item.account_code} (upload: ${item.upload_id}) -> ordem ${item.ordem}`);
             }
           });
         }
+
+        // Criar mapa direto de account_code para ordem para busca alternativa
+        const directOrderMap = new Map<string, number>();
+        chartData?.forEach(item => {
+          if (item.ordem !== null) {
+            directOrderMap.set(item.account_code, item.ordem);
+          }
+        });
+
+        // Para cada registro SPED, tentar encontrar a ordem
+        data.forEach(record => {
+          const key = `${record.upload_id}-${record.account_code}`;
+          if (!ordenMap.has(key)) {
+            // Tentar busca direta por código
+            const directOrder = directOrderMap.get(record.account_code);
+            if (directOrder) {
+              ordenMap.set(key, directOrder);
+              console.log(`Mapeamento direto: ${record.account_code} -> ordem ${directOrder}`);
+            }
+          }
+        });
       }
 
       const yrs = [...new Set(data.map(r => r.fiscal_year))].sort();
