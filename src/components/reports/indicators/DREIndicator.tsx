@@ -19,6 +19,7 @@ type PivotMap = {
 const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
   const [years, setYears] = useState<number[]>([]);
   const [items, setItems] = useState<PivotMap>({});
+  const [orderedCodes, setOrderedCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,12 +32,15 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
       setLoading(true);
       setError(null);
 
+      // Buscar dados dos registros SPED com join para chart_of_accounts para pegar a ordem
       let query = supabase
         .from('sped_records')
-        .select('*')
+        .select(`
+          *,
+          chart_of_accounts(ordem)
+        `)
         .eq('block_type', 'J150')
-        .order('fiscal_year', { ascending: true })
-        .order('account_code', { ascending: true });
+        .order('fiscal_year', { ascending: true });
 
       if (filters.fiscalYearStart && filters.fiscalYearEnd) {
         query = query
@@ -60,16 +64,41 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
       const yrs = [...new Set(data.map(r => r.fiscal_year))].sort();
       const map: PivotMap = {};
 
-      data.forEach(r => {
+      // Preparar dados com ordem e manter a ordem correta na estrutura do map
+      const dataWithOrder = data.map(r => ({
+        ...r,
+        ordem: (r as any).chart_of_accounts?.ordem || 9999
+      }));
+
+      // Ordenar por ordem primeiro, depois por account_code
+      dataWithOrder.sort((a, b) => {
+        if (a.ordem !== b.ordem) {
+          return a.ordem - b.ordem;
+        }
+        return a.account_code.localeCompare(b.account_code);
+      });
+
+      // Criar array ordenado para manter a sequência correta
+      const orderedCodes: string[] = [];
+
+      dataWithOrder.forEach(r => {
         const code = r.account_code as string;
         const desc = (r.account_description as string) || '';
         const year = r.fiscal_year as number;
         const value = Number(r.final_balance) || 0;
+        
         if (!map[code]) {
           map[code] = { description: desc, values: {} };
+          // Adicionar código na ordem correta apenas uma vez
+          if (!orderedCodes.includes(code)) {
+            orderedCodes.push(code);
+          }
         }
         map[code].values[year] = value;
       });
+
+      // Armazenar a ordem correta no estado
+      setOrderedCodes(orderedCodes);
 
       setYears(yrs);
       setItems(map);
@@ -82,14 +111,14 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
   };
 
   const handleExport = () => {
-    // Export simple CSV: Conta;Ano1;Ano2;...
+    // Export simple CSV: Conta;Ano1;Ano2;... usando ordem correta
     const header = ['Conta', ...years.map(String)].join(';');
-    const rows = Object.entries(items)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([_, item]) => {
-        const vals = years.map(y => String(item.values[y] ?? 0).replace('.', ','));
-        return [`"${item.description}"`, ...vals].join(';');
-      });
+    const rows = orderedCodes.map(code => {
+      const item = items[code];
+      if (!item) return '';
+      const vals = years.map(y => String(item.values[y] ?? 0).replace('.', ','));
+      return [`"${item.description}"`, ...vals].join(';');
+    }).filter(row => row !== '');
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -103,11 +132,15 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
     URL.revokeObjectURL(url);
   };
 
-  // Heurísticas simples para KPIs (opcional)
+  // Heurísticas simples para KPIs usando ordem correta
   const latestYear = years.length ? Math.max(...years) : undefined;
-  const entriesSorted = Object.entries(items).sort(([a], [b]) => a.localeCompare(b));
-  const findRow = (includes: string[]) =>
-    entriesSorted.find(([, it]) => includes.some(k => it.description?.toUpperCase().includes(k)))?.[1];
+  const findRow = (includes: string[]) => {
+    const foundCode = orderedCodes.find(code => {
+      const item = items[code];
+      return item && includes.some(k => item.description?.toUpperCase().includes(k));
+    });
+    return foundCode ? items[foundCode] : undefined;
+  };
   const receitaRow = findRow(['RECEITA LÍQUIDA', 'RECEITA BRUTA', 'RECEITA OPERACIONAL']);
   const lucroLiquidoRow = findRow(['LUCRO LÍQUIDO', 'RESULTADO LÍQUIDO', 'RESULTADO DO EXERCÍCIO']);
 
@@ -187,18 +220,22 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
                     ))}
                   </tr>
                 </thead>
-                <tbody>
-                  {entriesSorted.map(([code, it]) => (
-                    <tr key={code} className="border-b border-gray-100">
-                      <td className="py-2 text-sm">{it.description}</td>
-                      {years.map((y) => (
-                        <td key={y} className="text-right py-2 text-sm">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(it.values[y] || 0)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
+                 <tbody>
+                   {orderedCodes.map((code) => {
+                     const item = items[code];
+                     if (!item) return null;
+                     return (
+                       <tr key={code} className="border-b border-gray-100">
+                         <td className="py-2 text-sm">{item.description}</td>
+                         {years.map((y) => (
+                           <td key={y} className="text-right py-2 text-sm">
+                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(item.values[y] || 0)}
+                           </td>
+                         ))}
+                       </tr>
+                     );
+                   })}
+                 </tbody>
               </table>
             </div>
           ) : (
