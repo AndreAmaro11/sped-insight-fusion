@@ -82,8 +82,12 @@ export const generateDRE = (records: SpedRecord[]): DREItem[] => {
 
 // Função para gerar DRE com ordenação usando campo "ordem" do banco
 export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: string): Promise<DREItem[]> => {
+  console.log("=== GERANDO DRE COM ORDENAÇÃO ===");
+  console.log("Upload ID:", uploadId);
+  
   // Priorizar registros do Bloco J150 (DRE)
   let dreRecords = records.filter(r => r.block === 'J150');
+  console.log("Registros J150 encontrados:", dreRecords.length);
   
   if (dreRecords.length === 0) {
     console.warn("Nenhum registro J150 encontrado, usando ordenação padrão");
@@ -94,6 +98,8 @@ export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: str
   let ordenMap = new Map<string, number>();
   if (uploadId) {
     try {
+      console.log("Buscando ordens no banco para upload_id:", uploadId);
+      
       const { data: chartData, error } = await supabase
         .from('chart_of_accounts')
         .select('account_code, ordem')
@@ -103,11 +109,14 @@ export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: str
       if (error) {
         console.error('Erro ao buscar ordens:', error);
       } else if (chartData) {
+        console.log("Dados de ordem encontrados:", chartData);
         chartData.forEach(item => {
           if (item.ordem !== null) {
             ordenMap.set(item.account_code, item.ordem);
+            console.log(`Mapeando: ${item.account_code} -> ordem ${item.ordem}`);
           }
         });
+        console.log("Mapa de ordens criado:", Array.from(ordenMap.entries()));
       }
     } catch (error) {
       console.error('Erro na consulta de ordens:', error);
@@ -126,10 +135,14 @@ export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: str
     });
   });
 
+  console.log("Items antes da ordenação:", dreItems.map(item => `${item.categoria}: ${item.descricao}`));
+
   // Ordenar usando a coluna "ordem" quando disponível, senão por código
   dreItems.sort((a, b) => {
     const ordemA = ordenMap.get(a.categoria);
     const ordemB = ordenMap.get(b.categoria);
+    
+    console.log(`Comparando: ${a.categoria} (ordem: ${ordemA}) vs ${b.categoria} (ordem: ${ordemB})`);
     
     if (ordemA !== undefined && ordemB !== undefined) {
       return ordemA - ordemB;
@@ -142,6 +155,8 @@ export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: str
     }
     return a.categoria.localeCompare(b.categoria);
   });
+
+  console.log("Items após a ordenação:", dreItems.map(item => `${item.categoria}: ${item.descricao}`));
 
   // Calcular resultado líquido (último item da DRE)
   const totalReceitas = dreItems
@@ -162,6 +177,7 @@ export const generateDREWithOrder = async (records: SpedRecord[], uploadId?: str
     isTotal: true
   });
 
+  console.log("=== DRE FINAL GERADO ===");
   return dreItems;
 };
 
