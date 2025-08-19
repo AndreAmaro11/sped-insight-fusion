@@ -31,14 +31,13 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
     try {
       setLoading(true);
       setError(null);
+      console.log("=== INICIANDO BUSCA DRE ===");
+      console.log("Filtros:", filters);
 
-      // Buscar dados dos registros SPED com join para chart_of_accounts para pegar a ordem
+      // Primeiro, buscar os dados básicos dos registros SPED
       let query = supabase
         .from('sped_records')
-        .select(`
-          *,
-          chart_of_accounts(ordem)
-        `)
+        .select('*')
         .eq('block_type', 'J150')
         .order('fiscal_year', { ascending: true });
 
@@ -52,23 +51,60 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
         query = query.lte('fiscal_year', filters.fiscalYearEnd);
       }
 
+      console.log("Executando query básica...");
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na query básica:', error);
+        throw error;
+      }
+
+      console.log("Dados encontrados:", data?.length || 0);
 
       if (!data || data.length === 0) {
+        console.log("Nenhum dado encontrado");
         setYears([]);
         setItems({});
+        setOrderedCodes([]);
         return;
+      }
+
+      // Buscar ordens das contas do chart_of_accounts
+      const uploadIds = [...new Set(data.map(r => r.upload_id))];
+      console.log("Upload IDs únicos:", uploadIds);
+
+      let ordenMap = new Map<string, number>();
+
+      if (uploadIds.length > 0) {
+        console.log("Buscando ordens no chart_of_accounts...");
+        const { data: chartData, error: chartError } = await supabase
+          .from('chart_of_accounts')
+          .select('account_code, ordem, upload_id')
+          .in('upload_id', uploadIds)
+          .not('ordem', 'is', null);
+
+        if (chartError) {
+          console.error('Erro ao buscar chart_of_accounts:', chartError);
+        } else {
+          console.log("Chart data encontrada:", chartData?.length || 0);
+          chartData?.forEach(item => {
+            if (item.ordem !== null) {
+              ordenMap.set(`${item.upload_id}-${item.account_code}`, item.ordem);
+              console.log(`Mapeado: ${item.account_code} (upload: ${item.upload_id}) -> ordem ${item.ordem}`);
+            }
+          });
+        }
       }
 
       const yrs = [...new Set(data.map(r => r.fiscal_year))].sort();
       const map: PivotMap = {};
 
-      // Preparar dados com ordem e manter a ordem correta na estrutura do map
+      // Preparar dados com ordem
       const dataWithOrder = data.map(r => ({
         ...r,
-        ordem: (r as any).chart_of_accounts?.ordem || 9999
+        ordem: ordenMap.get(`${r.upload_id}-${r.account_code}`) || 9999
       }));
+
+      console.log("Dados com ordem preparados:", dataWithOrder.length);
 
       // Ordenar por ordem primeiro, depois por account_code
       dataWithOrder.sort((a, b) => {
@@ -77,6 +113,8 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
         }
         return a.account_code.localeCompare(b.account_code);
       });
+
+      console.log("Ordenação aplicada");
 
       // Criar array ordenado para manter a sequência correta
       const orderedCodes: string[] = [];
@@ -97,14 +135,18 @@ const DREIndicator: React.FC<DREIndicatorProps> = ({ filters }) => {
         map[code].values[year] = value;
       });
 
+      console.log("Códigos ordenados:", orderedCodes);
+      console.log("Map criado:", Object.keys(map).length);
+
       // Armazenar a ordem correta no estado
       setOrderedCodes(orderedCodes);
-
       setYears(yrs);
       setItems(map);
+
+      console.log("=== DRE CARREGADO COM SUCESSO ===");
     } catch (e) {
       console.error('Erro ao buscar DRE:', e);
-      setError('Erro ao carregar dados do DRE');
+      setError('Erro ao carregar dados do DRE: ' + (e as Error).message);
     } finally {
       setLoading(false);
     }
