@@ -185,6 +185,7 @@ const saveSpedDataToDatabase = async (processedData: SpedProcessedData, fileName
         const parts = accountInfo.split('|');
         accountName = parts[0];
         ordem = parseInt(parts[1]) || null;
+        console.log(`Account ${code}: Nome="${accountName}", Ordem=${ordem}`);
       }
       
       return {
@@ -260,12 +261,13 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
 
     // Capturar plano de contas do J150 com ordem
     if (recordType === 'J150' && fields.length >= 8) {
-      const ordem = fields[2] || '';
+      const ordem = fields[2] || ''; // Campo na posição 2 (índice 1)
       const accountCode = fields[3] || '';
       let accountName = fields[7] || '';
       if (accountCode && ordem) {
         const normalizedCode = normalizeAccountCode(accountCode);
         chartOfAccounts.set(normalizedCode, `${accountName}|${ordem}`);
+        console.log(`J150 - Capturado plano de contas: ${normalizedCode}, Nome: ${accountName}, Ordem: ${ordem}`);
       }
     }
   });
@@ -354,7 +356,8 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
     // DRE J150 (mantido para compatibilidade)
     if (recordType === 'J150' && fields.length >= 13) {
       try {
-        const codAgl = fields[2] || '';
+        const ordem = fields[2] || ''; // Ordem na posição 2
+        const codAgl = fields[3] || ''; // Código na posição 3
         const descricao = fields[7] || '';
         const valorFinal = parseSpedNumber(fields[10] || '0');
         const indicadorDC = fields[11] || 'D';
@@ -363,6 +366,8 @@ export const parseSpedFile = async (fileContent: string, fileName: string): Prom
         const isCredit = indicadorDC.toUpperCase() === 'C';
         if (grupoDRE === 'R') finalBalance = isCredit ? valorFinal : -valorFinal;
         else if (grupoDRE === 'D') finalBalance = isCredit ? -valorFinal : valorFinal;
+        
+        console.log(`J150 processado - Ordem: ${ordem}, Código: ${codAgl}, Descrição: ${descricao}, Final: ${finalBalance}`);
         records.push({ accountCode: codAgl, accountDescription: descricao, finalBalance, block: 'J150', fiscalYear });
       } catch (error) {
         console.error(`Erro ao processar J150 linha ${index + 1}: ${error}`);
